@@ -23,7 +23,7 @@
 ## Java标准异常
 **Throwable对象可分为两种类型：Error用来表示编译时和系统错误；Exception是可以被抛出的基本类型。**
 
-**RuntimeException是运行时异常，它们会自动被Java虚拟机抛出，所以不必在异常说明中把它们列出来。这些异常都是从RuntimeException类继承而来。它们也被称为“不受检查异常”**
+**RuntimeException是运行时异常，它们会自动被Java虚拟机抛出，所以不必在异常说明中把它们列出来。这些异常都是从RuntimeException类继承而来。它们也被称为“不受检查异常”。**
 
 **只有在你知道如何处理的情况下才捕获异常。**
 
