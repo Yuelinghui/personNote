@@ -391,3 +391,19 @@ observable2.compose(liftAll).subscribe(subscriber2);
 observable3.compose(liftAll).subscribe(subscriber3); 
 observable4.compose(liftAll).subscribe(subscriber4);
 ```
+使用compose方法，Observable可以利用传入的Transformer对象的call方法直接对自身进行处理。
+
+前面我们讲过，通过使用subscribeOn和observeOn()来实现线程的变换，那能不能多切换几次线程呢？答案是**能**！因为`observeOn()`指定的是Subscriber的线程，而这个Subscriber并不是（严格说应该为"不一定是"，但这里不妨理解为"不是"`subscribe()`参数中的Subscriber，而是`observeOn()执行时的当前Observable所对应的Subscriber，即它的直接下级Subscriber。换句话说，`observeOn()`指定的是它之后的操作所在的线程。因此如果有多次切换线程的需求，只要在每个想要切换线程的位置调用一次`observeOn()`即可
+```
+Observable.just(1, 2, 3, 4) // IO 线程，由 subscribeOn() 指定   
+  .subscribeOn(Schedulers.io()) 
+  .observeOn(Schedulers.newThread()) 
+  .map(mapOperator) // 新线程，由 observeOn() 指定 
+  .observeOn(Schedulers.io()) 
+  .map(mapOperator2) // IO 线程，由 observeOn() 指定 
+  .observeOn(AndroidSchedulers.mainThread) 
+  .subscribe(subscriber); // Android 主线程，由 observeOn() 指定
+```
+通过`observeOn()`的多次调用，程序实现了线程的多次切换。
+
+不过，不同于`observeOn()`，`subscribeOn()`的位置放在哪里都可以，但它是只能调用一次的。
