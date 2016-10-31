@@ -374,6 +374,20 @@ public <R> Observable<R> lift(Operator<? extends R, ? super T> operator) {
 
 除了`lift()`之外，Observable还有一种变换方式：`compose(Transformer)`，它和lift()区别在于，lift()**是针对事件项和事件序列的**，而compose()**是针对Observable自身的**
 ```
-public class LiftAllTransformer implements Observable.Transformer<Integer, String> { @Override public Observable<String> call(Observable<Integer> observable) { return observable .lift1() .lift2() .lift3() .lift4(); } } ... Transformer liftAll = new LiftAllTransformer(); observable1.compose(liftAll).subscribe(subscriber1); observable2.compose(liftAll).subscribe(subscriber2); observable3.compose(liftAll).subscribe(subscriber3); observable4.compose(liftAll).subscribe(subscriber4);
-
+public class LiftAllTransformer implements Observable.Transformer<Integer, String> {
+    @Override 
+    public Observable<String> call(Observable<Integer> observable) { 
+        return observable 
+                .lift1() 
+                .lift2() 
+                .lift3() 
+                .lift4(); 
+        } 
+} 
+...
+Transformer liftAll = new LiftAllTransformer();
+observable1.compose(liftAll).subscribe(subscriber1); 
+observable2.compose(liftAll).subscribe(subscriber2); 
+observable3.compose(liftAll).subscribe(subscriber3); 
+observable4.compose(liftAll).subscribe(subscriber4);
 ```
