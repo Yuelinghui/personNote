@@ -109,17 +109,96 @@ RxJava的事件回调除了普通事件`onNext`之外，还定义了两个特殊
     * unsubscribe()：这是Subscriber实现的另一个接口Subscription的方法，用来取消订阅。在这个方法调用后，Subscriber将不在接收事件。因为在subscribe()之后，Observable会持有Subscriber的引用，这个引用如果不能及时被释放，将有内存泄露的风险。所以最好保持一个原则：要在不再使用的时候尽快在合适的地方（例如 onPause() onStop() 等方法中）调用unsubscribe()来解除引用关系，以避免内存泄露的发生。
 
 2. 创建Observable
+
     Observable即被观察者，它决定了什么时候触发事件以及触发什么样的事件。RxJava使用`onCreate()`方法来创建Observable，并为它定义事件触发规则。
-```
-Observable observable = Observable.create(new Observable.OnSubscribe<String>() {
-     @Override
-     public void call(Subscriber<? super String> subscriber) {
-         subscriber.onNext("Hello");
-         subscriber.onNext("Hi");
-         subscriber.onNext("Aloha");
-         subscriber.onCompleted();
-    }
-});
 
-```
+    ```
+        Observable observable = Observable.create(new Observable.OnSubscribe<String>() {
+             @Override
+             public void call(Subscriber<? super String> subscriber) {
+                 subscriber.onNext("Hello");
+                 subscriber.onNext("Hi");
+                 subscriber.onNext("Aloha");
+                 subscriber.onCompleted();
+            }
+        });
 
+    ```
+    这里传入一个OnSubscribe对象作为参数，它会被存储在返回的Observerable对象中，相当于一个计划表，当Observerable被订阅时，OnSubscribe的`call()`方法会被调用，事件序列就会按照设定的顺序依次触发（对于上面的代码，观察者Subscriber会触发三次onNext()和一次onCompleted()）。
+
+    `onCreate()`是RxJava最基本的创造事件队列的方法。基于这个方法，RxJava还提供了一些方法用来快捷创建事件队列。
+
+    * just(T ...)：将传入的参数依次发送出去。
+    ```
+    Observable observable = Observable.just("Hello","Hi","Alopa");
+    // 将会依次调用：
+    // onNext("Hello");
+    // onNext("Hi");
+    // onNext("Alopa");
+    // onCompleted();
+    ```
+
+    * from(T[])/from(Iterable<? extends T>)：将传入的数组或者容器拆分成具体对象后发送出去。
+    ```
+    String words = new String{"Hello","Hi","Alopa"}; 
+    Observalbe observalbe = Observable.from(words);
+    // 将会依次调用：
+    // onNext("Hello");
+    // onNext("Hi");
+    // onNext("Alopa");
+    // onCompleted();
+
+    ```
+
+3. Subscribe(订阅)
+    
+    创建了Observer和Observeable之后，再用`Subscribe`把两者联系起来，这样就能工作了。
+    
+    ```
+    Observeable.subscribe(observer);
+    //或者
+    Observeable.subscribe(subscriber);
+    ```
+    除了`subscribe(Observer)`和`subscribe(Subscriber)`之外，RxJava还支持不完整定义的回调，RxJava会根据定义自动创建出Subscriber。
+   
+     ```
+     Action1<String> onNextAction = new Action1<String>() { 
+     // onNext()
+         @Override
+         public void call(String s) {
+             Log.d(tag, s);
+         }
+     };
+
+    Action1<Throwable> onErrorAction = new Action1<Throwable>() {
+    // onError()
+        @Override
+        public void call(Throwable throwable) {
+            // Error handling
+        }
+    };
+
+    Action0 onCompletedAction = new Action0() {
+    // onCompleted()
+        @Override
+        public void call() {
+            Log.d(tag, "completed");
+        }
+    };
+
+    // 自动创建 Subscriber ，并使用 onNextAction 来定义 onNext()
+    observable.subscribe(onNextAction);
+
+    // 自动创建 Subscriber ，并使用 onNextAction 和 onErrorAction 来定义 onNext() 和    onError()
+    observable.subscribe(onNextAction, onErrorAction);
+
+    // 自动创建 Subscriber ，并使用 onNextAction、 onErrorAction 和 onCompletedAction 来定义 onNext()、 onError() 和 onCompleted()
+    observable.subscribe(onNextAction, onErrorAction, onCompletedAction);
+    ```
+
+    * Action0：RxJava的接口，只有一个方法`call()`，这个方法是无参无返回值的。
+    * Action1：RxJava的接口，只有一个方法`call(T param)`，这个方法无返回值，但有一个参数。
+
+好了，下面我们来个简单的例子，使用一下上面的方法
+
+![](http://ofowf99vj.bkt.clouddn.com/%E4%B8%BE%E4%B8%AA%E4%BE%8B%E5%AD%90.jpg)
