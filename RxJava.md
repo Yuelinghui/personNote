@@ -15,4 +15,57 @@ RxJava的本质就是一个词：**异步**！
 
 ![](http://ofowf99vj.bkt.clouddn.com/%E4%B8%BE%E4%B8%AA%E4%BE%8B%E5%AD%90.jpg)
 
-假设现在有一个需求，有一个ImageView，我们从磁盘里拿出图片，然后让ImageView展示。因为从磁盘读取图片是耗时工作，所以我们把它放到后台线程执行。
+假设现在有一个需求，有一个ImageView，我们从磁盘里拿出图片数组，然后让ImageView挨个展示。因为从磁盘读取图片是耗时工作，所以我们把它放到后台线程执行。而图片显示必须在UI线程执行。我们平常使用Thread和Handler配合完成
+```
+new Thread() {
+ @Override
+ public void run() { 
+    super.run(); 
+    for (File folder : folders) {
+     File[] files = folder.listFiles(); 
+     for (File file : files) { 
+     if (file.getName().endsWith(".png")) { 
+     final Bitmap bitmap = getBitmapFromFile(file);
+     getActivity().runOnUiThread(new Runnable() { 
+         @Override public void run() { 
+           imageCollectorView.addImage(bitmap); 
+          } 
+       }); 
+     } 
+    } 
+   } 
+  } 
+}.start();
+
+```
+如果我们使用RxJava的话，实现方式是这样的
+```
+Observable.from(folders)
+ .flatMap(new Func1<File, Observable<File>>() {
+     @Override
+     public Observable<File> call(File file) {
+         return Observable.from(file.listFiles());
+     }
+ })
+ .filter(new Func1<File, Boolean>() {
+     @Override
+     public Boolean call(File file) {
+         return file.getName().endsWith(".png");
+     }
+ })
+ .map(new Func1<File, Bitmap>() {
+     @Override
+     public Bitmap call(File file) {
+         return getBitmapFromFile(file);
+     }
+ })
+ .subscribeOn(Schedulers.io())
+ .observeOn(AndroidSchedulers.mainThread())
+ .subscribe(new Action1<Bitmap>() {
+     @Override
+     public void call(Bitmap bitmap) {
+         imageCollectorView.addImage(bitmap);
+     }
+ });
+
+```
