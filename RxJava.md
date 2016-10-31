@@ -69,3 +69,57 @@ Observable.from(folders)
  });
 
 ```
+看完RxJava的代码，我们可能会觉得，代码量并没有减少，怎么就简洁了呢？其实，这里的**简洁**是指**逻辑的简洁**。RxJava的实现是一条从上到下的**链式调用**，没有任何嵌套。所以，RxJava的简洁就在于能把复杂的逻辑串成一条链。
+
+###RxJava的观察者模式
+
+RxJava有四个基本概念：`Observable`（被观察者），`Observer`（观察者），`subscribe`（订阅），事件。Observeable和Observer通过subscribe方式实现订阅关系，从而Observerable在需要的时候通过事件来通知Observer。
+
+RxJava的事件回调除了普通事件`onNext`之外，还定义了两个特殊的事件：`onCompleted`和`onError`。
+
+* onCompleted：事件队列完结。RxJava不仅把事件单独处理，还会把他们看做一个队列。Rxjava规定，当不会有新的onNext()发出时，需要触发onCompleted()作为标志。
+* onError：事件队列异常。在事件处理过程中发生异常，会触发onError()，同时事件队列自动终止，不允许再有事件发出。
+* 在一个正常运行的事件队列中，onCompleted和onError有且只有一个，并且是事件队列中的最后一个。这两者是互斥的，即在队列中调用了一个，另一个就不应该再调用。
+
+###RxJava的基本使用
+1. 创建Observer
+
+    Observer即观察者，它决定事件触发的时候会有怎样的动作。
+    
+    ```
+    Observer<String> observer = new Observer<String>() {
+         @Override 
+         public void onNext(String s) {
+             Log.d(tag, "Item: " + s);
+         }
+         @Override
+         public void onCompleted() {
+             Log.d(tag, "Completed!");
+         }
+         @Override
+         public void onError(Throwable e) {
+             Log.d(tag, "Error!");
+         }
+    };
+    ```
+    除了Observer接口之外，RxJava还提供了一个实现了Observer的抽象类：`Subscriber`，   它对Observer接口进行了一些扩展，但是基本使用方法还是一样的。
+
+    实质上，在RxJava的subscribe过程中，Observer也总是会先转换成Subscriber然后再使   用。两者之间的区别在于：
+    * onStart()：这是Subscriber增加的方法。它会在subscribe刚开始，而事件还未被发送出去之前被调用，用来做一些准备工作。注意：**onStart()总是在subscribe发生的线程被调用，而不能指定线程**。
+    * unsubscribe()：这是Subscriber实现的另一个接口Subscription的方法，用来取消订阅。在这个方法调用后，Subscriber将不在接收事件。因为在subscribe()之后，Observable会持有Subscriber的引用，这个引用如果不能及时被释放，将有内存泄露的风险。所以最好保持一个原则：要在不再使用的时候尽快在合适的地方（例如 onPause() onStop() 等方法中）调用unsubscribe()来解除引用关系，以避免内存泄露的发生。
+
+2. 创建Observable
+    Observable即被观察者，它决定了什么时候触发事件以及触发什么样的事件。RxJava使用`onCreate()`方法来创建Observable，并为它定义事件触发规则。
+```
+Observable observable = Observable.create(new Observable.OnSubscribe<String>() {
+     @Override
+     public void call(Subscriber<? super String> subscriber) {
+         subscriber.onNext("Hello");
+         subscriber.onNext("Hi");
+         subscriber.onNext("Aloha");
+         subscriber.onCompleted();
+    }
+});
+
+```
+
