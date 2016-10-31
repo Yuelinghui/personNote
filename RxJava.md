@@ -199,6 +199,5 @@ RxJava的事件回调除了普通事件`onNext`之外，还定义了两个特殊
     * Action0：RxJava的接口，只有一个方法`call()`，这个方法是无参无返回值的。
     * Action1：RxJava的接口，只有一个方法`call(T param)`，这个方法无返回值，但有一个参数。
 
-好了，下面我们来个简单的例子，使用一下上面的方法
 
 ![](http://ofowf99vj.bkt.clouddn.com/%E4%B8%BE%E4%B8%AA%E4%BE%8B%E5%AD%90.jpg)
