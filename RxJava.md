@@ -422,7 +422,7 @@ Observable.create(onSubscribe)
     .doOnSubscribe(new Action0() { 
         @Override 
         public void call() {  
-           progressBar.setVisibility(View.VISIBLE); // 需要在主线程执行 
+           progressBar.setVisibility(View.VISIBLE); //要在主线程执行 
         } 
     }) 
     .subscribeOn(AndroidSchedulers.mainThread()) // 指定主线程 
@@ -430,3 +430,11 @@ Observable.create(onSubscribe)
     .subscribe(subscriber);
 
 ```
+在doOnSubscribe()的后面跟一个subscrOn()就能指定准备工作的线程了。
+ß
+###RxJava使用的场景和使用方式
+
+1. 与Retrofit结合，实现网络请求的调用和回调。
+2. RxBinding。RxBinding是一个开源库，它提供了一套在Android平台上的基于RxJava的Binding API，就是类似于设置`setOnclickeListener`和`TextWatcher`这样注册绑定的API。
+3. 各种异步操作。
+4. RxBus，它并不是一个库，而是一种模式，它的思想是使用RxJava来实现EventBus，而让你不再需要使用Otto或者GreenRobot的EventBus。
