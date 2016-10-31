@@ -407,3 +407,11 @@ Observable.just(1, 2, 3, 4) // IO 线程，由 subscribeOn() 指定
 通过`observeOn()`的多次调用，程序实现了线程的多次切换。
 
 不过，不同于`observeOn()`，`subscribeOn()`的位置放在哪里都可以，但它是只能调用一次的。
+
+`onserveOn()`和`subscribeOn()`的内部实现也是用的`lift()`。
+
+####doOnSubscribe()
+
+在前面讲 Subscriber 的时候，提到过 Subscriber 的 onStart() 可以用作流程开始前的初始化。然而 onStart() 由于在subscribe() 发生时就被调用了，因此不能指定线程，而是只能执行在 subscribe() 被调用时的线程。这就导致如果 onStart() 中含有对线程有要求的代码（例如在界面上显示一个 ProgressBar，这必须在主线程执行），将会有线程非法的风险，因为有时你无法预测subscribe() 将会在什么线程执行。
+
+而与 Subscriber.onStart() 相对应的，有一个方法 Observable.doOnSubscribe() 。它和 Subscriber.onStart() 同样是在subscribe() 调用后而且在事件发送前执行，但区别在于它可以指定线程。默认情况下， doOnSubscribe() 执行在 subscribe() 发生的线程；而如果在 doOnSubscribe() 之后有 subscribeOn() 的话，它将执行在离它最近的 subscribeOn() 所指定的线程。
