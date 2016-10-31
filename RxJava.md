@@ -347,7 +347,7 @@ Observable.from(students)
 
 ####lift()
 
-这些变换虽然功能各不相同，但是实质都是**针对事件序列的处理和发送**。而在RxJava内部，它们是基于同一个基础的变换方法：`lift(operator)`。看一下lift()的内部实现
+这些变换虽然功能各不相同，但是实质都是**针对事件序列的处理和发送**。而在RxJava内部，它们是基于同一个基础的变换方法：`lift(operator)`。看一下lift()的内部实现（仅核心思路）
 ```
 public <R> Observable<R> lift(Operator<? extends R, ? super T> operator) {  
     return Observable.create(new OnSubscribe<R>() {
