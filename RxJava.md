@@ -431,7 +431,7 @@ Observable.create(onSubscribe)
 
 ```
 在doOnSubscribe()的后面跟一个subscrOn()就能指定准备工作的线程了。
-ß
+
 ###RxJava使用的场景和使用方式
 
 1. 与Retrofit结合，实现网络请求的调用和回调。
