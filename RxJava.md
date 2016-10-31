@@ -369,3 +369,11 @@ public <R> Observable<R> lift(Operator<? extends R, ? super T> operator) {
 3. 当用户调用经过 lift() 后的 Observable 的 subscribe() 的时候，使用的是 lift() 所返回的新的 Observable ，于是它所触发的 onSubscribe.call(subscriber)，也是用的新 Observable 中的新 OnSubscribe，即在 lift() 中生成的那个 OnSubscribe； 
 
 4. 而这个新 OnSubscribe 的 call() 方法中的 onSubscribe ，就是指的原始 Observable 中的原始 OnSubscribe ，在这个 call() 方法里，新 OnSubscribe 利用 operator.call(subscriber) 生成了一个新的 Subscriber（Operator 就是在这里，通过自己的 call() 方法将新 Subscriber 和原始 Subscriber 进行关联，并插入自己的『变换』代码以实现变换），然后利用这个新 Subscriber 向原始 Observable 进行订阅。 这样就实现了 lift() 过程，有点像一种代理机制，**通过事件拦截和处理实现事件序列的变换**。
+
+####compose：对Observable整体的变换
+
+除了`lift()`之外，Observable还有一种变换方式：`compose(Transformer)`，它和lift()区别在于，lift()**是针对事件项和事件序列的**，而compose()**是针对Observable自身的**
+```
+public class LiftAllTransformer implements Observable.Transformer<Integer, String> { @Override public Observable<String> call(Observable<Integer> observable) { return observable .lift1() .lift2() .lift3() .lift4(); } } ... Transformer liftAll = new LiftAllTransformer(); observable1.compose(liftAll).subscribe(subscriber1); observable2.compose(liftAll).subscribe(subscriber2); observable3.compose(liftAll).subscribe(subscriber3); observable4.compose(liftAll).subscribe(subscriber4);
+
+```
