@@ -31,4 +31,64 @@ public interface BasePresenter {
 
 ```
 
-每个模块都分为**Activity**，**Contract**，**Fragment**和**Presenter**。
+每个模块都分为**Activity**，**Contract**，**Fragment**和**Presenter**。我们就从M，V，P这三个方面来讨论一个模块（**以addedittask为例**）
+
+在介绍MVP各个部分之前，我们要先介绍Contract，这个结合View和Presenter，其实就是一个“胶水代码”，把View和Presenter**粘合**在一块的功能。
+
+###Contract
+
+我们看AddEditTaskContract接口，里面定义了这个View和Presenter需要实现的方法，然后在Presenter里会根据获取的数据来操作View。
+
+###Model
+
+其实整个项目只有一个model，就是data里的TasksLocalDataSource，所有的数据都是从这里获取，即从数据库获取。
+
+TasksDataSource接口定义了获取数据的方法，TasksLocalDataSource实现了这个接口，从数据库里获取数据，并使用LoadTasksCallback回调。
+
+###View
+
+AddEditTaskActivity和AddEditTaskFragment就是展示的View，先看Activity
+
+* 生成了Toolbar和ActionBar并进行设置。
+* 生成了具体展示的Fragment，并且展示。
+* 生成了这个模块的Presenter
+
+我觉得Activity其实就是声明并且初始化View和Presenter，然后操作一下Toolbar和ActionBar，具体怎么展示数据是放在Fragment里面的。
+
+然后是Fragment，实现了Contract里的View接口，主要任务就是定义布局并展示数据。所以Fragment里的代码非常简洁，就是通过实现Contract.View接口来获取需要展示的数据并显示出来，根本没有处理数据的逻辑。Fragment在onResume()的时候设置了自己对应的Presenter。就像最开始那张图一样，View是持有Presenter的。
+
+###Presenter
+
+这个是MVP里最重要的一环，它连接了Model和View，负责中间的数据，逻辑处理。
+
+AddEditTaskPresenter实现了Contract.Presenter接口和GetTaskCallback接口，并且我们看到Presenter还持有Contract.View的实例对象。调用start()来获取数据
+
+```
+@Overridepublic void start() {
+    if (!isNewTask()) {
+        populateTask();
+    }
+}
+```
+当调用start()方法时，判断Task初始化状态，然后调用populateTask()。
+
+```
+@Overridepublic void populateTask() {
+    if (isNewTask()) {
+        throw new RuntimeException("populateTask() was
+            called but task is new.");
+    }
+    mTasksRepository.getTask(mTaskId, this);}
+```
+
+使用TasksRepository来从数据库里获取数据，然后在`onTaskLoaded()`回调中拿到数据。
+
+```
+@Overridepublic void onTaskLoaded(Task task) {
+    if (mAddTaskView.isActive()) {
+        mAddTaskView.setTitle(task.getTitle());
+        mAddTaskView.setDescription(task.getDescription());
+     }
+}
+
+```
