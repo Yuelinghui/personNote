@@ -35,17 +35,17 @@ public interface BasePresenter {
 
 在介绍MVP各个部分之前，我们要先介绍Contract，这个结合View和Presenter，其实就是一个“胶水代码”，把View和Presenter**粘合**在一块的功能。
 
-###Contract
+####Contract
 
 我们看AddEditTaskContract接口，里面定义了这个View和Presenter需要实现的方法，然后在Presenter里会根据获取的数据来操作View。
 
-###Model
+####Model
 
 其实整个项目只有一个model，就是data里的TasksLocalDataSource，所有的数据都是从这里获取，即从数据库获取。
 
 TasksDataSource接口定义了获取数据的方法，TasksLocalDataSource实现了这个接口，从数据库里获取数据，并使用LoadTasksCallback回调。
 
-###View
+####View
 
 AddEditTaskActivity和AddEditTaskFragment就是展示的View，先看Activity
 
@@ -57,14 +57,15 @@ AddEditTaskActivity和AddEditTaskFragment就是展示的View，先看Activity
 
 然后是Fragment，实现了Contract里的View接口，主要任务就是定义布局并展示数据。所以Fragment里的代码非常简洁，就是通过实现Contract.View接口来获取需要展示的数据并显示出来，根本没有处理数据的逻辑。Fragment在onResume()的时候设置了自己对应的Presenter。就像最开始那张图一样，View是持有Presenter的。
 
-###Presenter
+####Presenter
 
 这个是MVP里最重要的一环，它连接了Model和View，负责中间的数据，逻辑处理。
 
 AddEditTaskPresenter实现了Contract.Presenter接口和GetTaskCallback接口，并且我们看到Presenter还持有Contract.View的实例对象。调用start()来获取数据
 
 ```
-@Overridepublic void start() {
+@Override
+public void start() {
     if (!isNewTask()) {
         populateTask();
     }
@@ -73,7 +74,8 @@ AddEditTaskPresenter实现了Contract.Presenter接口和GetTaskCallback接口，
 当调用start()方法时，判断Task初始化状态，然后调用populateTask()。
 
 ```
-@Overridepublic void populateTask() {
+@Override
+public void populateTask() {
     if (isNewTask()) {
         throw new RuntimeException("populateTask() was
             called but task is new.");
@@ -84,11 +86,50 @@ AddEditTaskPresenter实现了Contract.Presenter接口和GetTaskCallback接口，
 使用TasksRepository来从数据库里获取数据，然后在`onTaskLoaded()`回调中拿到数据。
 
 ```
-@Overridepublic void onTaskLoaded(Task task) {
+@Override
+public void onTaskLoaded(Task task) {
     if (mAddTaskView.isActive()) {
         mAddTaskView.setTitle(task.getTitle());
         mAddTaskView.setDescription(task.getDescription());
      }
 }
+```
+
+拿到数据后判断TaskView.isActive()，具体实现在Fragment里
 
 ```
+@Override
+public boolean isActive() {
+    return isAdded();
+}
+```
+
+然后调用TaskView.setTitle(String title)和setDescription(String description)，具体的实现还是在Fragment里。
+
+```
+@Override
+public void setTitle(String title) {
+    mTitle.setText(title);
+}
+
+@Override
+public void setDescription(String description) {
+    mDescription.setText(description);
+}
+```
+
+通过这个例子我们可以看出来，View初始化显示的控件，然后接收数据并展示，对于数据不做处理，传给我什么数据我就展示数据，顶多根据数据的状态来判断怎么展示数据，所有的逻辑处理都是放在Presenter里的。而Presenter先从Model里获取数据，然后根据逻辑处理数据，把处理完的数据传给View。
+
+###MVP的优缺点
+
+####优点：
+
+* 模型与视图完全分离，我们可以修改视图而不影响模型
+* 可以更高效地使用模型，因为所有的交互都发生在一个地方——Presenter内部
+* 我们可以将一个Presenter用于多个视图，而不需要改变Presenter的逻辑。这个特性非常的有用，因为视图的变化总是比模型的变化频繁。
+* 如果我们把逻辑放在Presenter中，那么我们就可以脱离用户接口来测试这些逻辑（单元测试）
+
+
+####缺点：
+* 多了很多“胶水代码”，导致代码量比较大。
+* View和Presenter的交互比较频繁，如果Presenter过多的渲染了View，那么一旦View需要变更，Presenter也需要变更。
