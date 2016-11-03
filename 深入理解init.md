@@ -112,3 +112,17 @@ property_set_fd = start_propety_service();
 
 虽然属性区域是由init进程创建的，但Android系统希望其他进程也能读取这块内存里的东西。
 
+* 把属性区域创建在共享内存上，而共享内存是可以跨进程的。
+* Android利用gcc的constructor属性，这个属性指明了一个_libc_prenit函数，当bionic libc库被加载时，将自动调用这个_libc_prenit，这个函数内部就将完成共享内存到本地进程的映射工作。
+
+客户端进程可以直接读取属性空间，但没有权限设置属性。
+
+####属性服务器的分析
+
+init进程会启动一个属性服务器，而客户端只能通过与属性服务器交互来设置属性。
+
+属性服务创建了一个用来接收请求的socket，在init中的for循环处进行相关处理。
+
+接收请求的地方在init进程中。当属性服务器收到客户端请求时，init会调用handle_property_set_fd进行处理。当客户端的权限满足要求时，init就调用property_set进行相关处理。
+
+客户端通过property_set发送请求，property_set由libcutils库提供。
