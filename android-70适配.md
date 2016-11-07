@@ -125,7 +125,8 @@ _应对策略：使用FilrProvider来解决这一个问题_
     _getUriForFile方法返回的Uri为：_
 
     ```
-    content://com.jph.takephoto.fileprovider/camera_photos/temp/1474960080319.jpg`
+    content://com.jph.takephoto.fileprovider
+            /camera_photos/temp/1474960080319.jpg`
     ```
 
     其中**camera_photos**就是file_paths文件中paths的name。
