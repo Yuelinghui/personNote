@@ -37,7 +37,10 @@ if (!file.getParentFile().exists()) {
     file.getParentFile().mkdirs();
 }
 Uri imageUri = Uri.fromFile(file); 
-Intent intent = new Intent(); intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);//设置Action为拍照 intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);//将拍取的照片保存到指定URI startActivityForResult(intent,1006);
+Intent intent = new Intent();
+intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);//设置Action为拍照 
+intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);//将拍取的照片保存到指定URI 
+startActivityForResult(intent,1006);
 ```
 
 在7.0上会抛出异常：
