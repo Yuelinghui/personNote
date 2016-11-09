@@ -108,4 +108,53 @@ ActivityManagerService也是由SystemServer创建的。通过startActivityManage
 Zygote等待请求，等请求来了，会响应请求，会回到ZygoteInit中。
 每当有请求数据发来时，zygote就会调用ZygoteConnection的runOnce函数。
 
-在runOnce函数中，zygote又分裂出了一个子进程，然后处理子进程，
+在runOnce函数中，zygote又分裂出了一个子进程，然后处理子进程，根据传入的参数设置新进程的一些属性，最终还是调用invokeStaticMain函数。zygote分裂子进程后，自己做了一些扫尾工作，然后继续等待请求进行下一次分裂。
+
+zygote的分裂由SS控制。
+
+####虚拟机heapsize的限制。
+
+zygote是通过fork来创建子进程的，Zygote本身设置的信息会被子进程全部继承，所以设置Java虚拟机堆栈最大值后，所有的Java程序都会是这个值。
+
+####开机速度优化
+
+Android开机时有三个地方耗时比较长：
+
+1. ZygoteInit的main函数中preloadClasses加载了一千多个类，这耗费了不少时间。
+2. 开机启动时，会对系统内所有的apk文件进行扫描并收集信息，这个动作耗费的时间非常长。
+3. SystemServer创建的那些Service，会占用不少时间。
+
+使用fork机制来创建Java进程的好处：
+
+1. zygote预加载的这些classes，在fork子进程时，仅需做一个复制即可，这就节约了子进程的启动时间。
+2. 根据fork的copy-on-write机制可知，有些累如果不做改变，甚至都不用复制，它们会和父进程共享数据，这样就会省去不少内存的占用。
+
+有人使用Berkeley Lab Checkpoin/Restart(BLCR)技术来提升开机速度，构想就是对系统做一个快照，将系统当前信息保存到一个文件中，当系统重启时，直接根据文件中的快照信息来恢复重启之前的状态。
+
+####Watchdog分析
+
+Android对SystemServer的参数是否被设置也很谨慎，所以专门为它增加了一条看门狗。
+
+Watchdog的调用流程：
+
+1. Wacthdog.getInstance().init();
+2. Watchdog.getInstance.start();
+3. Watchdog.getInstance.addMonitor();
+
+Watchdog使用单例模式，从线程类中派生，会在一个单独的线程中执行。
+
+init()方法就是初始化。
+
+start()方法导致Watchdog的run在另外一个线程中被执行。**隔一段时间会给另外一个线程发送一条MONITOR消息，那个线程将检查各个Service的健康状况。而看门狗会等待检查结果，如果第二次还没有返回结果，那么它会杀掉SS。**
+
+一个有三个Service是需要交给Watchdog检查的：
+
+1. ActivityManagerService
+
+2. PowerManagerService
+
+3. WindowManagerService
+
+想要支持看门狗的检查，就需要让这些Service实现monitor接口，然后Watchdog就会调用它们的monitor函数进行检查。
+
+monitor检查的就是**这些Service是不是发生死锁了！**
