@@ -30,6 +30,8 @@ public abstract interface java.util.Observer {
 
 ```
 
+####Verifiable接口实现
+
 我们需要定义我们的输入框，让它来实现Verifiable这个接口。
 
 ```
@@ -101,6 +103,8 @@ public boolean isBlank() {
 
 当EditText添加观察者时(addObserver(Observer))，我们记住这个观察者对象。判断是否完成校验(verify())，当有输入文字的时候为true，没有输入文字的时候为false。
 
+####Observer接口实现
+
 我们使用的Button实现Observer接口
 
 ```
@@ -157,25 +161,22 @@ public class CustomButton extends Button implements Observer {
             CustomButton.this.setEnabled(true);
         }
     }
-
-    // 判断是否已经通过校验
-    private boolean isVerify() {
-        for (Verifiable verifier : mVerifiers) {
-            if (!verifier.verify()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public int getVerifiersSize() {
-        if (ListUtil.isEmpty(mVerifiers)) {
-            return 0;
-        }
-            return mVerifiers.size();
-        }
-    }
+    ...
+}
 ```
 
-下面点击的Button已经定义好了，它就是一个观察者了，使用的时候可以指定Button观察（CustomButton.observer(Verify verify)）。
+点击的Button已经定义好了，它就是一个观察者了，使用的时候可以指定Button观察的对象（CustomButton.observer(Verify verify)）。
 
+####使用方法
+
+```
+// 从布局文件里拿到EditTextview和Button
+CustomEditText editText = (CustomEditText)findViewById(R.id.edit);
+
+CustomButton button = (CustomButton)findViewById(R.id.btn);
+
+// 把Button和EditText绑定
+button.observer(editText);
+```
+
+这样之后，当输入框内没有文字的时候，按钮是不可点击的，我们还可以通过selector来设置Button不可用时的颜色。当输入框内输入文字，按钮就可以变得可以点击。
