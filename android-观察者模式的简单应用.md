@@ -80,29 +80,13 @@ public class CustomButton extends Button implements Observer {
         }
     }
 
-
-
     @Override
     public void update(Observable observable, Object data) {
-        if (mAutoPerformClick) {
-            if (!ListUtil.isEmpty(mVerifiers)) {
-                if (isVerify()) {
-                    this.postDelayed(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            performClick();
-                        }
-                    }, PERFORM_DELAY_TIME);
-                }
-            }
-        } else {
-            for (Verifiable verifier : mVerifiers) {
-                if (verifier.isBlank()) {
-                    CustomButton.this.setEnabled(false);
-                    return;
-                }
-            }
+       for (Verifiable verifier : mVerifiers) {
+            if (verifier.isBlank()) {
+                CustomButton.this.setEnabled(false);
+                return;
+               }
             CustomButton.this.setEnabled(true);
         }
     }
@@ -117,56 +101,11 @@ public class CustomButton extends Button implements Observer {
         return true;
     }
 
-
-
- /**
-
- * 设置自动执行下一步按钮
-
- *
-
- * @param auto
-
- */
-
- public void setAutoPerformClick(boolean autoPerformClick) {
-
- mAutoPerformClick = autoPerformClick;
-
- }
-
-
-
- /**
-
- * 获得是否自动执行下一步
-
- *
-
- * @return mAutoPerformClick
-
- */
-
- public boolean isAutoPerformClick() {
-
- return mAutoPerformClick;
-
- }
-
-
-
- public int getVerifiersSize() {
-
- if (ListUtil.isEmpty(mVerifiers)) {
-
- return 0;
-
- }
-
- return mVerifiers.size();
-
- }
-
-}
-
+    public int getVerifiersSize() {
+        if (ListUtil.isEmpty(mVerifiers)) {
+            return 0;
+        }
+            return mVerifiers.size();
+        }
+    }
 ```
