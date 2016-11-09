@@ -57,100 +57,55 @@ public class CustomButton extends Button implements Observer {
             mVerifiers.add(verifier);
             verifier.addObserver(this);
         }
-    update(null, null);
-}
+        update(null, null);
+    }
 
- public void removeObserver(Verifiable verifier) {
+    // 解除观察者
+    public void removeObserver(Verifiable verifier) {
+        if (verifier != null) {
+            mVerifiers.remove(verifier);
+            if (ListUtil.isEmpty(mVerifiers)) {
+                mAutoPerformClick = false;
+            }
+            this.update(null, null);
+        }
+    }
 
-
-
- if (verifier != null) {
-
- mVerifiers.remove(verifier);
-
- if (ListUtil.isEmpty(mVerifiers)) {
-
- mAutoPerformClick = false;
-
- }
-
- this.update(null, null);
-
- }
-
- }
-
-
-
- /**
-
- * 清空观察者
-
- */
-
- public void clearObserver() {
-
- if (!ListUtil.isEmpty(mVerifiers)) {
-
- mVerifiers.clear();
-
- mAutoPerformClick = false;
-
- this.update(null, null);
-
- }
-
- }
+    // 清除观察者
+    public void clearObserver() {
+        if (!ListUtil.isEmpty(mVerifiers)) {
+            mVerifiers.clear();
+            mAutoPerformClick = false;
+            this.update(null, null);
+        }
+    }
 
 
 
- @Override
+    @Override
+    public void update(Observable observable, Object data) {
+        if (mAutoPerformClick) {
+            if (!ListUtil.isEmpty(mVerifiers)) {
+                if (isVerify()) {
+                    this.postDelayed(new Runnable() {
 
- public void update(Observable observable, Object data) {
-
- if (mAutoPerformClick) {
-
- if (!ListUtil.isEmpty(mVerifiers)) {
-
- if (isVerify()) {
-
- this.postDelayed(new Runnable() {
-
-
-
- @Override
-
- public void run() {
-
- performClick();
-
- }
-
- }, PERFORM_DELAY_TIME);
-
- }
-
- }
-
- } else {
-
- for (Verifiable verifier : mVerifiers) {
-
- if (verifier.isBlank()) {
-
- CPButton.this.setEnabled(false);
-
- return;
-
- }
-
- }
-
- CPButton.this.setEnabled(true);
-
- }
-
- }
+                        @Override
+                        public void run() {
+                            performClick();
+                        }
+                    }, PERFORM_DELAY_TIME);
+                }
+            }
+        } else {
+            for (Verifiable verifier : mVerifiers) {
+                if (verifier.isBlank()) {
+                    CustomButton.this.setEnabled(false);
+                    return;
+                }
+            }
+            CustomButton.this.setEnabled(true);
+        }
+    }
 
 
 
