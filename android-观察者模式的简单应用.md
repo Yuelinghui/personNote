@@ -107,33 +107,15 @@ public class CustomButton extends Button implements Observer {
         }
     }
 
-
-
- /**
-
- * 是否已通过验证
-
- *
-
- * @return
-
- */
-
- private boolean isVerify() {
-
- for (Verifiable verifier : mVerifiers) {
-
- if (!verifier.verify()) {
-
- return false;
-
- }
-
- }
-
- return true;
-
- }
+    // 判断是否已经通过校验
+    private boolean isVerify() {
+        for (Verifiable verifier : mVerifiers) {
+            if (!verifier.verify()) {
+                return false;
+            }
+        }
+        return true;
+    }
 
 
 
