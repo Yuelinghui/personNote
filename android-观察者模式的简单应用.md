@@ -20,6 +20,84 @@ public interface Verifiable {
  void addObserver(Observer obj);
 }
 ```
+我们还需要定义我们的输入框，让它来实现Verify。
+
+```
+public class CustomEdit extends EditText implements Verifiable {
+ // 观察它的对象
+ private Observer mVerifyObserver = null;
+
+ public CustomEdit(Context context, AttributeSet attrs, int defStyle) {
+
+ super(context, attrs, defStyle);
+
+ initView();
+
+ }
+
+ public CustomEdit(Context context, AttributeSet attrs) {
+
+ this(context, attrs, 0);
+
+ }
+
+ public CustomEdit(Context context) {
+
+ this(context, null);
+
+ }
+
+
+
+ // 初始化控件，给控件设置一个TextChangedListener
+
+ private void initView() {
+
+ addTextChangedListener(mTextWatcher);
+
+ }
+
+ ...
+
+}
+
+```
+
+
+
+我们在初始化EditText的时候给它设置了一个TextWatcher，这样当输入框内的文字变动时我们可以监听到。
+
+
+
+```
+
+// TextWatcher
+
+private TextWatcher mTextWatcher = new TextWatcher() {
+
+
+
+ @Override
+
+ public void afterTextChanged(Editable s) {
+
+ if (mVerifyObserver != null) {
+
+ mVerifyObserver.update(null, null);
+
+ }
+
+ }
+
+...
+
+};
+
+```
+
+
+
+在TextWatcher监听中，当文字发生完变化的时候我们调用观察者的update()方法。
 
 Android中提供了观察者模式的接口Observer。我们使用的Button实现这个接口
 
@@ -110,40 +188,5 @@ public class CustomButton extends Button implements Observer {
     }
 ```
 
-下面点击的Button已经定义好了，它就是一个观察者了，使用的时候可以指定Button观察（CustomButton.observer(Verify verify)）。我们还需要定义我们的输入框，让它来实现Verify。
+下面点击的Button已经定义好了，它就是一个观察者了，使用的时候可以指定Button观察（CustomButton.observer(Verify verify)）。
 
-```
-public class CustomEdit extends EditText implements Verifiable {
-    // 观察它的对象
-    private Observer mVerifyObserver = null;
-    public CustomEdit(Context context, AttributeSet attrs, int defStyle) { 
-        super(context, attrs, defStyle);
-        initView();
-    }
-    public CustomEdit(Context context, AttributeSet attrs) {
-        this(context, attrs, 0);
-    }
-    public CustomEdit(Context context) {
-        this(context, null);
-    }
-
-    // 初始化控件，给控件设置一个TextChangedListener
-    private void initView() {
-        super.setOnFocusChangeListener(mOnFocusChangeListener);
-        addTextChangedListener(mTextWatcher);
-    }
-
-    // TextWatcher
-    private TextWatcher mTextWatcher = new TextWatcher() {
-
-    @Override
-    public void afterTextChanged(Editable s) {
-        if (mVerifyObserver != null) {
-            mVerifyObserver.update(null, null);
-        }
-    }
-...
-};
-
-}
-```
