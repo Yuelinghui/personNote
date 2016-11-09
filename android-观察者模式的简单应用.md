@@ -132,5 +132,18 @@ public class CustomEdit extends EditText implements Verifiable {
         super.setOnFocusChangeListener(mOnFocusChangeListener);
         addTextChangedListener(mTextWatcher);
     }
+
+    // TextWatcher
+    private TextWatcher mTextWatcher = new TextWatcher() {
+
+    @Override
+    public void afterTextChanged(Editable s) {
+        if (mVerifyObserver != null) {
+            mVerifyObserver.update(null, null);
+        }
+    }
+...
+};
+
 }
 ```
