@@ -114,7 +114,7 @@ public class CustomButton extends Button implements Observer {
 
     ...
 
-    // 添加观察者
+    // 添加被观察对象
     public void observer(Verifiable verifier) {
         // 当有新的被观察对象添加的时候，按钮应该不可用
         if (this.isEnabled()) {
@@ -135,7 +135,7 @@ public class CustomButton extends Button implements Observer {
         update(null, null);
     }
 
-    // 解除观察者
+    // 解除被观察对象
     public void removeObserver(Verifiable verifier) {
         if (verifier != null) {
             mVerifiers.remove(verifier);
@@ -143,7 +143,7 @@ public class CustomButton extends Button implements Observer {
         }
     }
 
-    // 清除观察者
+    // 清除被观察对象
     public void clearObserver() {
         if (!ListUtil.isEmpty(mVerifiers)) {
             mVerifiers.clear();
