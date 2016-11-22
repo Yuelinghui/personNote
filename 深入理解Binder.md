@@ -7,4 +7,6 @@ Binder是Android系统提供的一种IPC（进程间通信）机制。由于Andr
 ![](http://ofowf99vj.bkt.clouddn.com/Binder%E5%85%B3%E7%B3%BB.jpeg)
 
 * Server进程要先注册一些Service到ServiceManager中，所以Server是ServiceManager的客户端，而ServiceManager就是服务端。
-* 如果某个Client进程要使用某个Service，必须先到ServiceManager中huo
+* 如果某个Client进程要使用某个Service，必须先到ServiceManager中获取该Service的相关信息，所以Client是ServiceManager的客户端。
+* Client根据得到的Service信息与Service所在的Server进程建立通信的通道，然后就可以直接与Service交互了，所以Client也是Server的客户端。
+* 最重要的一点是：**三者的交互都是基于Binder通信的，所以通过任意两者之间的关系，都可以揭示Binder的奥秘。**
