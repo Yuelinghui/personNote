@@ -176,3 +176,6 @@ public class ColumnToolBarBehavior extends CoordinatorLayout.Behavior<NavBarView
 CollapsingToolbarLayout提供了一个可以折叠的Toolbar，`app:layout_collapseMode=”pin”`来确保Toolbar在view折叠的时候仍然被固定在屏幕的顶部。除了固定住view，你还可以使用`app:layout_collapseMode=”parallax”`以及使用`app:layout_collapseParallaxMultiplier=”0.7”`来设置视差因子,来实现视差滚动效果（比如CollapsingToolbarLayout里面的一个ImageView），这中情况和CollapsingToolbarLayout的app:contentScrim=”?attr/colorPrimary”属性一起配合更完美。
 
 还要设置`app:layout_scrollFlags="scroll|exitUntilCollapsed"`，同时还要给底部的滑动view设置`app:layout_behavior="@string/appbar_scrolling_view_behavior">`
+
+###总结
+Design support library确实非常好用，之前实现起来非常复杂的效果，使用这里的控件都能轻易实现，不用**重复造轮子**。当然，使用时一方面，了解内部实现机制确实是非常必要的。
