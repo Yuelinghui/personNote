@@ -77,3 +77,69 @@ mViewPager = (ViewPager) findViewById(R.id.viewpager);
 TabLayout tabLayout = (TabLayout) findViewById(R.id.tabs);
 tabLayout.setupWithViewPager(mViewPager);
 ```
+
+使用setupWithViewPager就把TabLayout和ViewPager联系在一起了。
+
+###NavigationView
+
+NavigationView在MD设计中非常重要，之前Google也提出了使用DrawerLayout来实现导航抽屉。这次，在support library中，Google提供了NavigationView来实现导航菜单界面，
+
+```
+<android.support.v4.widget.DrawerLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/dl_main_drawer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <android.support.design.widget.NavigationView
+        android:id="@+id/nv_main_navigation"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        app:headerLayout="@layout/navigation_header"
+        app:menu="@menu/drawer_view"/>
+
+</android.support.v4.widget.DrawerLayout>
+```
+
+有两个属性非常重要**`app:headerLayout`和`app:menu`**，通过这两个属性，我们可以很方便的指定导航页面的头部布局和菜单布局
+
+可以通过设置一个OnNavigationItemSelectedListener，使用其**setNavigationItemSelectedListener()**来获得元素被选中的回调事件。它为你提供被点击的 菜单元素 ，让你可以处理选择事件，改变复选框状态，加载新内容，关闭导航菜单
+
+```
+navigationView.setNavigationItemSelectedListener( new NavigationView.OnNavigationItemSelectedListener() {
+    @Override 
+    public boolean onNavigationItemSelected(MenuItem menuItem) { 
+        menuItem.setChecked(true);
+        mDrawerLayout.closeDrawers(); 
+        return true; 
+    }
+ });
+```
+###AppBarLayout
+
+AppBarLayout跟它的名字一样，把容器类的组件全部作为AppBar
+
+```
+<android.support.design.widget.AppBarLayout
+android:id="@+id/appbar"
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"> 
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"/>
+
+    <android.support.design.widget.TabLayout
+        android:id="@+id/tabs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+</android.support.design.widget.AppBarLayout>
+
+```
