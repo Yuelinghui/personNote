@@ -143,3 +143,36 @@ android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 </android.support.design.widget.AppBarLayout>
 
 ```
+
+这里就是把Toolbar和TabLayout放到了APPBarLayout里，让他们当做一个整体来做AppBar
+
+###CoordinatorLayout
+
+CoordinatorLayout是一个增强型的FrameLayout，它可以说是这次Design support library更新的重中之重。它从另一个层面去控制子View触摸事件的响应。
+
+1. 给这个可滚动组件设置了layout_behavior 
+2. 给另一个控件设置了layout_scrollFlags那么，当设置了layout_behavior的控件滑动时，就会触发设置了layout_scrollFlags的控件发生状态的改变。
+
+设置的layout_scrollFlags有以下几种选项：
+
+* scroll：所有想滚动出屏幕的view都需要设置这个flag- 没有设置这个flag的view将被固定在屏幕顶部。
+* enterAlways：个flag让任意向下的滚动都会导致该view变为可见，启用快速“返回模式”。
+* enterAlwaysCollapsed: 当你的视图已经设置minHeight属性又使用此标志时，你的视图只能已最小高度进入，只有当滚动视图到达顶部时才扩大到完整高度。
+* exitUntilCollapsed：同样顾名思义，这个flag时定义何时退出，当你定义了一个minHeight，这个view将在滚动到达这个最小高度的时候消失。
+
+注意：**所有使用scroll flag的view都必须定义在没有使用scroll flag的view的前面，这样才能确保所有的view从顶部退出，留下固定的元素。**
+
+CoordinatorLayout协调布局，其实它的核心点是在**Behavior**。我们可以自定义Behavior，来实现View的联动。
+
+View的联动动画有很多种实现方式，但是这种使用CoordinatorLayout，自定义Behavior的方式减少了联动View的依赖，核心代码都在Behavior中
+
+```
+public class ColumnToolBarBehavior extends CoordinatorLayout.Behavior<NavBarView>
+
+```
+
+###CollapsingToolbarLayout
+
+CollapsingToolbarLayout提供了一个可以折叠的Toolbar，`app:layout_collapseMode=”pin”`来确保Toolbar在view折叠的时候仍然被固定在屏幕的顶部。除了固定住view，你还可以使用`app:layout_collapseMode=”parallax”`以及使用`app:layout_collapseParallaxMultiplier=”0.7”`来设置视差因子,来实现视差滚动效果（比如CollapsingToolbarLayout里面的一个ImageView），这中情况和CollapsingToolbarLayout的app:contentScrim=”?attr/colorPrimary”属性一起配合更完美。
+
+还要设置`app:layout_scrollFlags="scroll|exitUntilCollapsed"`，同时还要给底部的滑动view设置`app:layout_behavior="@string/appbar_scrolling_view_behavior">`
