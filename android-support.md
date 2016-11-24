@@ -178,4 +178,4 @@ CollapsingToolbarLayout提供了一个可以折叠的Toolbar，`app:layout_colla
 还要设置`app:layout_scrollFlags="scroll|exitUntilCollapsed"`，同时还要给底部的滑动view设置`app:layout_behavior="@string/appbar_scrolling_view_behavior">`
 
 ###总结
-Design support library确实非常好用，之前实现起来非常复杂的效果，使用这里的控件都能轻易实现，不用**重复造轮子**。当然，使用时一方面，了解内部实现机制确实是非常必要的。
+Design support library确实非常好用，之前实现起来非常复杂的效果，使用这里的控件都能轻易实现，不用**重复造轮子**。当然，使用是一方面，了解内部实现机制确实是非常必要的。
