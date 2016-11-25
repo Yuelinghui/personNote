@@ -111,6 +111,8 @@ shouldShowRequestPermissionRationale(Activity activity,String permission)
 ```
 如果这个函数返回的是true，那么就表示用户没有勾选**不再提醒**的选项，申请权限对话框可以弹出，如果返回false，那么申请权限对话框就不再弹出，申请的结果一直都是之前的不同意。
 
+**注意：当程序第一次申请这个权限的时候，这个方法返回的值是false。因为第一次申请权限弹出框来的时候使没有“不再提醒”的选项的！**
+
 4. 如果检查对话框弹出返回的是true，那么我们就可以调用申请权限的方法了
 ```
 requestPermissions(Activity activity,String[] permissions,int requestCode);
