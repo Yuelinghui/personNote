@@ -13,5 +13,5 @@
 * [Android M适配](android-m适配.md)
 * [Android Support Design](android-support.md)
 * [重构\(1-9章\)-读书笔记](重构-读书笔记.md)
-* [重构（10章后）——读书笔记](重构（11章后）——读书笔记.md)
+* [重构（10-11章）——读书笔记](重构（10-11章）——读书笔记.md)
 
