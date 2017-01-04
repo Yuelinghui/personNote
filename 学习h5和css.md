@@ -433,3 +433,9 @@ border-radius可以控制圆角的半径
     color: red;
 }
 ```
+
+class与id的另一个差别：id选择器只与页面中的一个元素匹配。
+
+###使用多个样式表
+
+可以使用多个样式。顺序很zhongyao 
