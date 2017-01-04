@@ -376,3 +376,4 @@ font-family: "XXX",sans-serif;
 * 选择关键字，指定它作为body规则中的字体大小
 * 使用em或百分数，相对于body字体大小指定其他元素的字体大小
 
+text-decoration只会选择一个规则，不同规则中的装饰不会累加在一起。只有为text-decoration样式选择的规则才能确定使用什么装饰
