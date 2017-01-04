@@ -263,7 +263,7 @@ h1,h2 {
 
 ```
 <link type="text/css" rel="stylessheet" href="XXX.css">
-``
+```
 
 rel属性指定了HTML文件与所链接的文件之间的关系，我们要链接到一个样式表，所有使用“stylesheet”
 
