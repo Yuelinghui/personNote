@@ -176,6 +176,203 @@ list item = li
 
 还会了解<img>是怎样让浏览器做大量额外的工作来获取和显示图像的
 
+* <img>元素是一个内联元素，它不会在前面或后面插入换行
+* src属性指定了在Web页面上显示的图像文件的位置
+* <img>元素时一个void元素
+* src属性不只是用于相对链接，还可以在src属性中放入URL
+* 使用<img>元素的alt属性为访问者提供一些指示
+
+```
+<img src="http://XXXX" alt="XXXXX">
+```
+
+###调整图像大小
+
+width和height可以提前告诉浏览器页面中一个图像的大小
+
+```
+<img src="http://XXX" width="48" height="100">
+```
+
+高度和宽度都使用像素数来指定。若没有指定宽度和高度，则浏览器在页面中显示这个图像之前会自动确定图像的大小
+
+若把一个透明的图像放在Web页面中，则要确保这个图像的蒙版颜色与Web页面的背景色一致。透明图像可以使用PNG或GIF格式
+
+为什么需要alt属性
+
+* 若图像出于某种原因无法显示，这个alt属性会帮助你显示所指定的alt文本，来取代图像
+* 对于有视力障碍的用户，他们会使用一个屏幕阅读器来阅读页面，屏幕阅读器可以为用户读出alt文本，能帮助他们更好地理解页面
+
 ##标准及其他
 
 使用最新，最棒的HTML标准，也就是HTML5
+
+H5的doctype：
+
+```
+<!doctype html>
+```
+
+###HTML，新的“活标准”
+
+HTML不会再有版本6，7，8……制定标准的人已经把这个规范变成了一个活的标准，它会随着技术的发展形成相应文档。
+
+增加一个<meta>指定字符编码
+
+```
+<meta charset="utf-8"/>
+```
+
+<meta>标记放在<head>元素中。
+
+编写合法HTML页面的做法：
+
+* 一定要以<doctype>开头
+* <html>元素不能少
+* 要使用<head>和<body>编写更好的HTML。只有这两个元素能直接放在<html>元素中。所有其他元素都必须放在<head>或<body>元素中
+* 在<head>中指定正确的字符编码
+* 一定要在<head>元素中包含一个<title>元素。只能在<head>元素中放置<title>，<meta>，<style>元素
+* 嵌套某些元素时要当心。不要把<a>元素嵌套在另一个<a>元素中。不允许在<img>等void元素中嵌套其他内联元素
+* 检查属性。有些元素属性是必要的，有些则是可选的
+
+##CSS入门
+
+```
+P {
+    background-color:red;
+}
+```
+
+最外层是要装饰的元素，括号里面是样式设置，前面是样式名，后面是样式的值，最好加上分号
+
+要为HTML直接增加CSS样式，需要在<head>元素中增加开始和结束style标记，然后CSS规则要放在里面
+
+可以合并规则
+
+```
+h1,h2 {
+    color:red;
+}
+```
+
+这个就叫做**选择器**。CSS允许指定各种选择器，来确定将样式应用到哪些元素
+
+将选择器代码放到一个单独的文件，XXX.css，然后在HTML中链接到这个文件。
+
+```
+<link type="text/css" rel="stylessheet" href="XXX.css">
+``
+
+rel属性指定了HTML文件与所链接的文件之间的关系，我们要链接到一个样式表，所有使用“stylesheet”
+
+<link>是一个void元素。它没有结束标记
+
+元素可以从它们的父元素继承样式，同时也能够覆盖继承
+
+把元素增加到类中
+
+```
+<p class="XXXX"></p>
+```
+
+创建一个类选择器
+
+```
+p.XXXX {
+    color:green;
+}
+```
+
+希望XXX类中所有元素都有同一种样式，可以这样写选择器
+
+```
+.XXX {
+    color:green;
+}
+```
+
+元素可以加入多个类
+
+```
+<p class="XXX1 XXX2 XXX3"></p>
+```
+
+若多个选择器选择一个元素，就像上面的例子，一个段落属于3个类，它们都同样定义了color属性，哪个规则会胜出呢？
+
+若一个规则比其他规则更特定，它就会胜出。若它们的特定程度相同而无法解决冲突，就利用样式表文件中规则的顺序来解决问题。使用CSS文件中最后列出的规则（最靠右）
+
+若CSS里有错误，通常这个错误以下的所有其他规则都会被忽略
+
+属性：
+
+* color：设置文本元素的字体颜色
+* font-weight：控制文本的粗细，可以用它来设置粗体
+* left：指定一个元素的左边所在位置
+* line-height：设置一个文本元素中的行间距
+* top：控制元素顶部的位置
+* background-color：控制元素的背景颜色
+* border：在一个元素周围加边框。
+* padding：内边距
+* font—size：文本大小
+* text-align：文本对齐方式
+* letter-spacing：字母之间设置间距
+* font-style：设置斜体文本
+* list-style：允许改变列表中列表项的外观
+* background-image:在元素后面放置一个图像
+
+##增加字体和颜色样式
+
+* 使用font-family属性定制页面中使用的字体
+* 使用font-size属性控制字体大小
+* 使用color属性为文本设置颜色
+* 使用font-weight属性影响字体的粗细（lighter，normal，bold，bolder）
+* 使用text-decoration属性为文本增加更多风格（none，underline，overline，line-through）
+
+font-family可以指定多个字体，输入字体名，并用逗号分隔
+
+```
+body {
+  font-family: Verdana, Geneva, Arial, sans-serif;   
+}
+```
+
+这个如何解释呢？挨个字体检查，若有，就使用这个字体，若没有就往后检查
+
+利用font-family属性，可以创建一个首选字体列表
+
+若一个字体名中包含多个单词，比如Courier New，只需在声明中的字体名两边加上引号：font-family：”Courier New“；
+
+若就是想用某个字体来展示文本，可以使用Web字体
+
+1. 找到一个字体。
+2. 确保所需字体的所有格式
+3. 把字体文件放在Web上
+4. 在CSS中增加@font-face属性
+5. 在CSS中使用font-family名
+6. 加载页面
+
+```
+@font-face {
+
+    font-family: "XXX";
+    src: url("http://XXX/XXX.woff"),
+         url("http://XXX/XXX.ttf");
+}
+
+font-family: "XXX",sans-serif; 
+```
+
+@font-face是一个内置的CSS规则，而不是一个选择器规则。
+
+指定文字大小：
+
+* 使用px指定文字大小时，px必须紧跟在像素数后面，之间不能有空格
+* 使用%指定字体大小时，相对于父元素的字体大小
+* 使用em时，不是指定一个百分数，而是要指定一个比例因子
+* 使用关键字。指定为xx-small，x-small,small,medium,large,x-large,xx-large。使用浏览器中定义的默认值来完成这个转换
+
+在大多数浏览器中得到一致结果：
+
+* 选择关键字，指定它作为body规则中的字体大小
+* 使用em或百分数，相对于body字体大小指定其他元素的字体大小
+
