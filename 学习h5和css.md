@@ -390,6 +390,46 @@ text-decoration只会选择一个规则，不同规则中的装饰不会累加�
 * 内边距周围可能放置一个可选的边框（border），边框可以有各种不同的宽度，颜色和样式
 * 最后，有一个可选的透明外边距（margin）包围所有部分，类似于内边距，外边距也是透明的，本身没有颜色或装饰
 
+###设置背景图片
 
+* background-image:url(XXXX.png)
 
+* background-repeat: no-repeat
 
+默认地，背景图像会”平铺“，也就是反复重复来填满整个背景空间。这个属性可以控制这种平铺行为
+
+repeat，no-repeat，repeat-x，repeat-y，inherit（按父元素的设置来处理）
+
+* background-position: top left
+
+这个属性会设置图像的位置，可以按像素指定，也可以指定为一个百分数，或者可以使用关键字，top，left，right，bottom，center
+
+###边框样式
+
+border-style属性可以控制边框的视觉样式。一共有8种可用的边框样式
+* solid：实线
+* double：有两条线
+* groove：槽线（看起来就像页面中的一个槽）
+* outset：外凸，看起来就像从页面凸出来一样
+* dotted：虚线，点线
+* dashed：破折线
+* inset：内凹，看起来像页面凹进去
+* ridge：脊线，看起来像页面上一个凸起的山脊
+
+border-width属性控制边框的宽度，可以使用关键字（thin，medium，thick）或像素来指定边框宽度
+
+border-color属性设置边框颜色
+
+可以指定某一边的边框（border-top-color等）
+
+border-radius可以控制圆角的半径
+
+为元素指定id与将元素添加到一个类很相似，唯一的区别就是：**属性名为id，而不是class。一个元素不能有多个id，另外页面上不允许多个元素都有相同的id**
+
+要按id来选择一个元素，需要在id前面使用一个`#`字符。
+
+```
+#footer {
+    color: red;
+}
+```
