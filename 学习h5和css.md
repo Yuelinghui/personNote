@@ -519,3 +519,9 @@ maring: 20px;
 padding:0px(上和下) 20px(左和右);
 margin:0px 20px;
 ```
+font的简写形式：
+```
+font: font-style font-variant font-weight font-size/line-height font-family;
+
+
+```
