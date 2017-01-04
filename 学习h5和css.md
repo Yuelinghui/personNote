@@ -438,4 +438,33 @@ class与id的另一个差别：id选择器只与页面中的一个元素匹配�
 
 ###使用多个样式表
 
-可以使用多个样式。顺序很zhongyao 
+可以使用多个样式。顺序很重要：一个样式表会覆盖在它上面链接的样式表中的样式。
+
+之所以希望有多个样式文件，实际还有一个原因：可能想针对将要显示页面的设备类型来调整页面的样式。可以利用media属性
+
+在`<link>`元素中增加这个属性，只使用适用于指定设备的样式文件
+
+```
+<link href="XXX.css" rel="stylesheet" media="screen and (max-device-width:480px)">
+```
+
+还有很多属性可以使用，如min-device-width，以及显示方向[orientation，可以是横向（landscape）或纵向（portrait）]
+
+还可以直接把媒体查询写在CSS中
+
+```
+@media screen and (min-device-width:481px) {
+    #guarantee {
+        margin-right: 250px;
+    }
+}
+
+@media screen and (max-device-width:480px) {
+    #guarantee {
+        margin-right: 30px;
+    }
+}
+
+```
+
+**媒体查询是目前标准组织在积极发展的一个领域，所有要密切关注指定设备的最佳实践，这方面还在不断演进发展**
