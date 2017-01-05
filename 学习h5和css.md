@@ -713,3 +713,19 @@ name属性定义表单元素的名字，服务器将使用这个元素名
 ```
 
 `<textarea>`元素会创建一个多行的文本区，可以在其中输入多行文本
+```
+<textarea name="comments" rows="10" cols="48">文本区控件中的初始文本</textarea>
+```
+
+`<select>`元素会在Web页面中创建一个菜单控件
+`<option>`元素表示各个菜单项
+```
+<select name="characters">
+    <option value="Buckaroo">Buckaroo</option>
+    <option value="Tim">Tim</option>
+</select>
+```
+
+**number** `<input>`元素会限制只能输入数字，还可以指定最小和最大值
+
+**range** `<input>`元素会显示一个滑动条
