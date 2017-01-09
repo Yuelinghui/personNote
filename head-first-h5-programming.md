@@ -196,3 +196,32 @@ var fido = {
  }
 }
 ```
+
+使用**this**来指定本对象中的属性
+```
+this.title
+```
+
+window对象表示你的JavaScript程序的全局环境，同时还表示应用的主窗口。因此，其中包含很多核心的属性和方法。
+
+window对象相当于自己的全局环境，所以即使没有在前面加上window，window属性或方法名也能顺利解析。另外，自己定义的所有全局变量都会放在window命名空间中，所以可以作为window.myvariable来引用。
+
+document对象实际上是window对象的一个属性:
+* domain：提供文档的服务器的锁
+* title：得到文档的标题
+* URL：就是文档的URL
+* getElementById(TagName/ClassName)：根据元素的id（标记/类）来获取元素
+* createElement：创建适合包含在DOM中的元素
+
+使用getElementById的方法时，返回的元素也是对象：**元素对象**
+* innerHTML：改变标签的内容
+* childElementCount：这个元素有多少子元素
+* firstChild：第一个子元素，如果有的话
+* appendChild/insertBefore：想DOM中插入新元素，作为这个元素的子元素
+* setAttribute/getAttribute：设置/获取元素中的属性，比如“src”，“class”，“id”
+
+若函数名后面使用了小括号，就说明你希望调用函数`window.onload=init()`，若只是使用名而没有小括号，就把这个函数返回值赋给前面。输入时差别很细微，但是含义有天壤之别。
+
+若声明一个局部变量时与一个全局变量同名，这个局部变量会遮蔽全局变量。
+
+若赋一个新变量而没有使用var关键字，这个变量就是全局的，即使是在一个函数中首次赋值。
