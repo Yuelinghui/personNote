@@ -183,3 +183,16 @@ fido.age = 5;
 
 若属性成功删除，delete表达式会返回true。
 
+###对象也可以有行为
+
+**对象中有函数时，这个对象有一个方法**
+
+```
+var fido = {
+ name: "fido",
+ weight: 40,
+ bark: function() {
+     alert("Woof woof!");
+ }
+}
+```
