@@ -19,4 +19,5 @@
 * [学习H5和CSS](学习h5和css.md)
 * [head first H5 Programming](head-first-h5-programming.md)
 * [钱包插件化](钱包插件化.md)
+* [ViewDragHelper简单使用](viewdraghelper.md)
 
