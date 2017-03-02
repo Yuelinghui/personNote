@@ -21,4 +21,5 @@
 * [钱包插件化](钱包插件化.md)
 * [ViewDragHelper简单使用](viewdraghelper简单使用.md)
 * [ViewPager滑动监听](viewpager滑动监听.md)
+* [ViewPager一页显示多个item](viewpageritem.md)
 
