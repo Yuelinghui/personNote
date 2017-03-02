@@ -6,7 +6,7 @@
 * [MVP](MVP模式.md)
 * [深入理解init](深入理解init.md)
 * [深入理解zygote](深入理解zygote.md)
-* [Android N适配](android N适配.md)
+* \[Android N适配\]\(android N适配.md\)
 * [Android 观察者模式的简单应用](android-观察者模式的简单应用.md)
 * [深入理解常见类](深入理解常见类.md)
 * [深入理解Binder](深入理解Binder.md)
@@ -21,5 +21,5 @@
 * [钱包插件化](钱包插件化.md)
 * [ViewDragHelper简单使用](viewdraghelper简单使用.md)
 * [ViewPager滑动监听](viewpager滑动监听.md)
-* [ViewPager一页显示多个item](viewpageritem.md)
+* [ViewPager一页显示多个item](ViewPager一行显示多个Item.md)
 
