@@ -66,3 +66,5 @@ private class AsycBlurBitmap extends AsyncTask<File, Void, Bitmap> {
 ```
 
 这里传入的参数是File，也可以直接传入Bitmap，这个就看当时能够拿到的数据了。
+
+**这里要注意传入的模糊半径必须`0<radius<=25`**
