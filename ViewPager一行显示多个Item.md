@@ -3,7 +3,7 @@
 ##需求
 最近遇到了一个比较难搞的需求：
 
-![](http://ofowf99vj.bkt.clouddn.com/viewpager.png)
+![](/assets/viewpager.png)
 
 一个ViewPager的一页要显示多个item，当前的item显示在中间，两边还能看到上一个和下一个item，在网上搜了一下，找到了合适的解决方案
 

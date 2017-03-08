@@ -13,7 +13,7 @@ RxJava的本质就是一个词：**异步**！
 
 同样都是异步，为啥不用AsyncTask/Handler/XXX？**简洁**！异步操作很关键的一点是程序的简洁性，因为在调度过程比较复杂的情况下，异步代码经常会既难写也难被读懂。`AsyncTask`和`Handler`都是为了使异步操作更加简洁。RxJava的优势也是**简洁**，但是它的不同之处在于：**随着逻辑越来越复杂，它依然能够保持简洁**。
 
-![](http://ofowf99vj.bkt.clouddn.com/%E4%B8%BE%E4%B8%AA%E4%BE%8B%E5%AD%90.jpg)
+![](/assets/举个例子.jpg)
 
 假设现在有一个需求，有一个ImageView，我们从磁盘里拿出图片数组，然后让ImageView挨个展示。因为从磁盘读取图片是耗时工作，所以我们把它放到后台线程执行。而图片显示必须在UI线程执行。我们平常使用Thread和Handler配合完成
 ```
@@ -201,7 +201,7 @@ RxJava的事件回调除了普通事件`onNext`之外，还定义了两个特殊
 
 好了，基本的方法介绍完了，我们来个简单的例子使用一下上面的方法。
 
-![](http://ofowf99vj.bkt.clouddn.com/%E4%B8%BE%E4%B8%AA%E4%BE%8B%E5%AD%90.jpg)
+![](/assets/举个例子.jpg)
 
 由Id来取得图片并展示：
 ```
@@ -241,7 +241,7 @@ Observable.create(new Onsubscribe<Drawable>() {
 
 然而
 
-![](http://ofowf99vj.bkt.clouddn.com/ranbingluan.jpg)
+![](/assets/然并卵.jpg)
 
 在RxJava的默认规则中，事件的发出和消费都在同一个线程。观察者的目的在于：**后台处理，前台回调**的异步机制，因此异步对于RxJava异常重要。而要实现异步，则需要用到RxJava的另一个概念：Scheduler。
 
