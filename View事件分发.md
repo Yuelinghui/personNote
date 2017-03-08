@@ -1,7 +1,7 @@
 #View的事件分发
 
 啥也别说，先上图
-![](http://ofowf99vj.bkt.clouddn.com/view_dispatch.png)
+![](/assets/view_dispatch.png)
 
 图分为三层，从上到下依次为Activity，ViewGroup，View
 
