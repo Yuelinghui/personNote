@@ -27,4 +27,5 @@
 * [DiskLruCache简单使用](DiskLruCache简单使用.md)
 * [缓存淘汰算法](缓存淘汰算法.md)
 * [Glide图片加载框架简单使用](Glide图片加载框架简单使用.md)
+* [ART与Dalvik对比](ART与Dalvik对比.md)
 
