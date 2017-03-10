@@ -29,4 +29,5 @@
 * [Glide图片加载框架简单使用](Glide图片加载框架简单使用.md)
 * [ART与Dalvik对比](ART与Dalvik对比.md)
 * [AsyncTask探索](AsyncTask探索.md)
+* [IntentService原理](IntentService原理.md)
 
