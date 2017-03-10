@@ -30,4 +30,5 @@
 * [ART与Dalvik对比](ART与Dalvik对比.md)
 * [AsyncTask探索](AsyncTask探索.md)
 * [IntentService原理](IntentService原理.md)
+* [保证后台服务不被杀死的方法](保证后台服务不被杀死的方法.md)
 
