@@ -31,4 +31,5 @@
 * [AsyncTask探索](AsyncTask探索.md)
 * [IntentService原理](IntentService原理.md)
 * [保证后台服务不被杀死的方法](保证后台服务不被杀死的方法.md)
+* [Looper，Handler，Thread](android异步消息处理机制.md)
 
