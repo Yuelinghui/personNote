@@ -60,6 +60,8 @@ Looper主要作用：
 
 1. 传入callback和是否异步。代码里FIND_POTENTIAL_LEAKS是false的，所以基本不用看了。先获取当前线程保存的Looper实例。若mLooper为null就会抛出异常。**但是我们平常在Activity里用的时候并没有初始化Looper啊？那是因为ActivityThread已经准备好Looper了！**后面基本就是赋值了，从Looper对象里拿到了保存的MessageQueue，这样就保证了handler的实例与Looper实例中MessageQueue关联上了。
 
+2. 传入Looper，callback和是否异步。
+
 在Handler中我们经常使用的就是sendMessage()和dispatchMessage()了，先看sendMessage()：
 
 ![](/assets/Handler_sendMessage.jpeg)
