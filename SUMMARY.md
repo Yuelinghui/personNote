@@ -33,4 +33,5 @@
 * [保证后台服务不被杀死的方法](保证后台服务不被杀死的方法.md)
 * [Looper，Handler，Thread](android异步消息处理机制.md)
 * [Bitmap所占内存以及内存的计算方法](Bitmap所占内存以及内存计算方法.md)
+* [HandlerThread探索](HandlerThread探索.md)
 
