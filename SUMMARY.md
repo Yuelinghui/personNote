@@ -34,4 +34,5 @@
 * [Looper，Handler，Thread](android异步消息处理机制.md)
 * [Bitmap所占内存以及内存的计算方法](Bitmap所占内存以及内存计算方法.md)
 * [HandlerThread探索](HandlerThread探索.md)
+* [10大基础实用算法](10大基础实用算法.md)
 
