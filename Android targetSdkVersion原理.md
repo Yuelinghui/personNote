@@ -1,10 +1,10 @@
-#Android targetSdkVersion原理
+# Android targetSdkVersion原理
 
 compileSdkVersion和minSdkVersion都非常好理解，前者表示编译的SDK版本，后者表示应用兼容的最低 SDK 版本。但是对于targetSdkVersion其实很难一句话解析清楚。
 
 targetSdkVersion是Android系统提供前向兼容的主要手段。这是什么意思呢？随着Android系统的升级，某个系统的API或者模块的行为可能会发生改变，但是为了保证老APK的行为还是和以前兼容。只要APK的targetSdkVersion不变，即使这个APK安装在新 Android系统上，其行为还是保持老的系统上的行为，这样就保证了系统对老应用的前向兼容性。
 
-##举例
+## 举例
 
 在Android 4.4(API 19以后，AlarmManager的`set()`和`setRepeat()`这两个API的行为发生了变化。在Android 4.4以前，这两个API设置的都是精确的时间，系统能保证在API设置的时间点上唤醒Alarm。因为省电原因Android 4.4系统实现了AlarmManager的对齐唤醒，这两个API设置唤醒的时间，系统都对待成不精确的时间，系统只能保证在你设置的时间点之后某个时间唤醒。
 
