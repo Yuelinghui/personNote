@@ -1,4 +1,4 @@
-#分析Activity的启动过程
+# 分析Activity的启动过程
 
 通过源码分析Activity的启动过程
 
