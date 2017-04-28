@@ -33,7 +33,7 @@ Annotation处理器在处理Annotation时可以根据源文件中的Annotation�
 ```
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)
-public @interface AutoCreate {
+    public @interface AutoCreate {
 }
 ```
 3. 新建Java Module：“apt-process”。在apt-process的gradle文件中添加依赖
@@ -55,9 +55,9 @@ import java.lang.String;
 import java.lang.System;
 
 public final class HelloWorld {
-public static void main(String[] args) {
-System.out.println("Hello,JavaPoet!");
-}
+    public static void main(String[] args) {
+        System.out.println("Hello,JavaPoet!");
+    }
 }
 ```
 
@@ -98,7 +98,7 @@ public @interface AutoCreateActivity {
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AutoCreateView {
-int value() default 0;
+    String value();
 }
 ```
 2. 修改apt-process中的TestProcess文件
@@ -110,62 +110,62 @@ private Elements mElementUtils;
 
 @Override
 public synchronized void init(ProcessingEnvironment processingEnv) {
-super.init(processingEnv);
-mElementUtils = processingEnv.getElementUtils();
+    super.init(processingEnv);
+    mElementUtils = processingEnv.getElementUtils();
 }
 
 @Override
 public SourceVersion getSupportedSourceVersion() {
-return SourceVersion.RELEASE_7;
+    return SourceVersion.RELEASE_7;
 }
 
 @Override
 public Set<String> getSupportedAnnotationTypes() {
-return Collections.singleton(AutoCreateActivity.class.getCanonicalName());
+    return Collections.singleton(AutoCreateActivity.class.getCanonicalName());
 }
 
 @Override
 public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 
-Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(AutoCreateActivity.class);
-if (elements != null) {
-for (Element element : elements) {
-TypeElement typeElement = (TypeElement) element;
-List<? extends Element> members = mElementUtils.getAllMembers(typeElement);
-MethodSpec.Builder methodSpecBuilder = MethodSpec.methodBuilder("bindView")
-.addModifiers(Modifier.PUBLIC,Modifier.STATIC)
-.returns(TypeName.VOID)
-.addParameter(ClassName.get(typeElement.asType()),"activity");
+    Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(AutoCreateActivity.class);
+    if (elements != null) {
+        for (Element element : elements) {
+            TypeElement typeElement = (TypeElement) element;
+            List<? extends Element> members = mElementUtils.getAllMembers(typeElement);
+            MethodSpec.Builder methodSpecBuilder = MethodSpec.methodBuilder("bindView")
+            .addModifiers(Modifier.PUBLIC,Modifier.STATIC)
+            .returns(TypeName.VOID)
+            .addParameter(ClassName.get(typeElement.asType()),"activity");
 
-for (Element item : members) {
-AutoCreateView autoCreateView = item.getAnnotation(AutoCreateView.class);
-if (autoCreateView == null) {
-continue;
-}
-methodSpecBuilder.addStatement(String.format("activity.%s = (%s) activity.findViewById(%s)",item.getSimpleName()
-,ClassName.get(item.asType()).toString(),autoCreateView.value()));
-}
+            for (Element item : members) {
+                AutoCreateView autoCreateView = item.getAnnotation(AutoCreateView.class);
+                if (autoCreateView == null) {
+                    continue;
+                }
+                methodSpecBuilder.addStatement(String.format("activity.%s = (%s) activity.findViewById(%s)",item.getSimpleName()
+                ,ClassName.get(item.asType()).toString(),autoCreateView.value()));
+            }
 
-TypeSpec typeSpec = TypeSpec.classBuilder("AutoCreate" + element.getSimpleName())
-.superclass(TypeName.get(typeElement.asType()))
-.addModifiers(Modifier.PUBLIC,Modifier.FINAL)
-.addMethod(methodSpecBuilder.build())
-.build();
+            TypeSpec typeSpec = TypeSpec.classBuilder("AutoCreate" + element.getSimpleName())
+            .superclass(TypeName.get(typeElement.asType()))
+            .addModifiers(Modifier.PUBLIC,Modifier.FINAL)
+            .addMethod(methodSpecBuilder.build())
+            .build();
 
-JavaFile javaFile = JavaFile.builder(getPackageName(typeElement),typeSpec).build();
+            JavaFile javaFile = JavaFile.builder(getPackageName(typeElement),typeSpec).build();
 
-try {
-javaFile.writeTo(processingEnv.getFiler());
-} catch (IOException e) {
-e.printStackTrace();
-}
-}
-}
+            try {
+                javaFile.writeTo(processingEnv.getFiler());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 return true;
 }
 
 private String getPackageName(TypeElement typeElement) {
-return mElementUtils.getPackageOf(typeElement).getQualifiedName().toString();
+    return mElementUtils.getPackageOf(typeElement).getQualifiedName().toString();
 }
 }
 ```
@@ -182,15 +182,15 @@ FloatingActionButton fab;
 Toolbar toolbar;
 @Override
 protected void onCreate(Bundle savedInstanceState) {
-super.onCreate(savedInstanceState);
-setContentView(R.layout.activity_main);
-AutoCreateMainActivity.bindView(this);
-setSupportActionBar(toolbar);
-fab.setOnClickListener(new View.OnClickListener() {
-@Override
-public void onClick(View view) {
-}
-});
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.activity_main);
+    AutoCreateMainActivity.bindView(this);
+    setSupportActionBar(toolbar);
+    fab.setOnClickListener(new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+        }
+    });
 ```
 
 先在Activity上加上注解，然后在控件声明上加上注解并声明控件id，然后我们Rebuild代码，生成了新的Java文件（AutoCreateMainActivity），然后我们调用这个类的bindView方法。
