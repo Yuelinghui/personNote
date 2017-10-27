@@ -1,0 +1,122 @@
+# 数据类
+
+数据类是一种非常强大的类，它可以让你避免创建Java中的用于保存状态但又操作非常简单的POJO的模版代码。它们通常只提供了用于访问它们属性的简单的getter和setter。定义一个新的数据类非常简单：
+
+```
+// kotlin
+data class Forecast(val date: Date, val temperature: Float, val details: String)
+```
+
+## 额外的函数
+
+通过数据类，我们可以方便地得到很多有趣的函数，一部分是来自属性，我们之前已经讲过（从编写getter和setter函数）：
+
+- equals(): 它可以比较两个对象的属性来确保他们是相同的。
+- hashCode(): 我们可以得到一个hash值，也是从属性中计算出来的。
+- copy(): 你可以拷贝一个对象，可以根据你的需要去修改里面的属性。我们会在稍后的例子中看到。
+- 一系列可以映射对象到变量中的函数。我也很快就会讲到这个。
+
+## 复制一个数据类
+
+如果我们使用不可修改的对象，就像我们之前讲过的，假如我们需要修改这个对象状态，必须要创建一个新的一个或者多个属性被修改的实例。这个任务是非常重复且不简洁的。
+
+举个例子，如果我们需要修改`Forecast`中的`temperature`（温度），我们可以这么做：
+
+```
+// kotlin
+val f1 = Forecast(Date(), 27.5f, "Shiny day")
+val f2 = f1.copy(temperature = 30f)
+```
+
+如上，我们拷贝了第一个forecast对象然后只修改了`temperature`的属性而没有修改这个对象的其它状态。
+
+当你使用Java类时小心“不可修改性”,如果你决定使用不可修改来工作，你需要意识到Java不是根据这种思想来设计的，在某些情况下，我们仍然可以修改这些状态。在上一个例子中，你还是可以访问`Date`对象，然后改变它的值。有个简单（不安全）的方法是记住所有需要修改状态的对象作为一个规则，然后必要的时候去拷贝一份。
+
+另外一个方法是封装这些类。你可以创建一个`ImmutableDate`类，它封装了`Date`并且不允许去修改它们的状态。决定哪种方式取决于你。本书中，我不会对不可修改性太限制，所以我不会去为一些危险的类去创建一个封装类。
+
+## 映射对象到变量中
+
+映射对象的每一个属性到一个变量中，这个过程就是我们知道的多声明。这就是为什么会有`componentX`函数被自动创建。使用上面的`Forecast`类举个例子：
+
+```
+// kotlin
+val f1 = Forecast(Date(), 27.5f, "Shiny day")
+val (date, temperature, details) = f1
+```
+
+上面这个多声明会被编译成下面的代码：
+
+```
+// kotlin
+val date = f1.component1()
+val temperature = f1.component2()
+val details = f1.component3()
+```
+
+这个特性背后的逻辑是非常强大的，它可以在很多情况下帮助我们简化代码。举个例子，`Map`类含有一些扩展函数的实现，允许它在迭代时使用key和value：
+
+```
+// kotlin
+for ((key, value) in map) {
+    Log.d("map", "key:$key, value:$value")
+}
+```
+
+## 转换json到数据类
+
+我们现在知道怎么去创建一个数据类，那我们开始准备去解析数据。在`date`包中，创建一个名为`ResponseClasses.kt`新的文件，如果你打开第8章中的url，你可以看到json文件整个结构。它的基本组成包括一个城市，一个系列的天气预报，这个城市有id，名字，所在的坐标。每一个天气预报有很多信息，比如日期，不同的温度，和一个由描述和图标的id。
+
+在我们当前的UI中，我们不会去使用所有的这些数据。我们会解析所有到类里面，因为可能会在以后某些情况下会用到。以下就是我们需要使用到的类：
+
+```
+// kotlin
+data class ForecastResult(val city: City, val list: List<Forecast>)
+data class City(val id: Long, val name: String, val coord: Coordinates,
+                val country: String, val population: Int)
+data class Coordinates(val lon: Float, val lat: Float)
+data class Forecast(val dt: Long, val temp: Temperature, val pressure: Float,
+                    val humidity: Int, val weather: List<Weather>,
+                    val speed: Float, val deg: Int, val clouds: Int,
+                    val rain: Float)
+data class Temperature(val day: Float, val min: Float, val max: Float,
+                       val night: Float, val eve: Float, val morn: Float)
+data class Weather(val id: Long, val main: String, val description: String,
+                   val icon: String)
+```
+
+当我们使用Gson来解析json到我们的类中，这些属性的名字必须要与json中的名字一样，或者可以指定一个`serialised name`（序列化名称）。一个好的实践是，大部分的软件结构中会根据我们app中布局来解耦成不同的模型。所以我喜欢使用声明简化这些类，因为我会在app其它部分使用它之前解析这些类。属性名称与json结果中的名字是完全一样的。
+
+现在，为了返回被解析后的结果，我们的`Request`类需要进行一些修改。它将仍然只接收一个城市的`zipcode`作为参数而不是一个完整的url，因此这样变得更加具有可读性。现在，我会把这个静态的url放在一个`companion object`（伴随对象）中。如果我们之后还要对该API增加更多请求，我们需要提取它。
+
+**Companion objects**
+
+Kotlin允许我们去定义一些行为与静态对象一样的对象。尽管这些对象可以用众所周知的模式来实现，比如容易实现的单例模式。
+
+我们需要一个类里面有一些静态的属性、常量或者函数，我们可以使用`companion objecvt`。这个对象被这个类的所有对象所共享，就像Java中的静态属性或者方法。
+
+以下是最后的代码：
+
+```
+// kotlin
+public class ForecastRequest(val zipCode: String) {
+    companion object {
+        private val APP_ID = "15646a06818f61f7b8d7823ca833e1ce"
+        private val URL = "http://api.openweathermap.org/data/2.5/" +
+                "forecast/daily?mode=json&units=metric&cnt=7"
+        private val COMPLETE_URL = "$URL&APPID=$APP_ID&q="
+    }
+    
+    fun execute(): ForecastResult {
+        val forecastJsonStr = URL(COMPLETE_URL + zipCode).readText()
+        return Gson().fromJson(forecastJsonStr, ForecastResult::class.java)
+    }
+}
+
+```
+
+记得在`build.gradle`中增加你需要的Gson依赖：
+
+```
+// groovy
+compile "com.google.code.gson:gson:2.4"
+```

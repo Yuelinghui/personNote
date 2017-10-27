@@ -1,0 +1,257 @@
+# 设置界面
+
+直到现在，我们都是使用的默认的城市来实现这个app，但是现在是时候增加一个选择城市的功能了。我们的App需要一个设置栏来让用户修改城市。
+
+我们使用`zip code`（邮编）来区分城市。一个真正的App可能需要更多的信息，因为只有邮编在整个世界中可能无法作为辨认依据。但是我们至少会显示在设置中使用`zip code`定义的世界上的城市。这会是一个用来解释怎么使用有趣的方式处理preferences的例子。
+
+## 创建一个设置activity
+
+当toolbar上溢出菜单（`overflow menu`）的`settings`选项被点击时，需要打开一个新的Activity。所以首先要做的事情时需要一个新的`SettingActivity`：
+
+```
+// kotlin
+class SettingsActivity : AppCompatActivity() {
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_settings)
+        setSupportActionBar(toolbar)
+        supportActionBar.setDisplayHomeAsUpEnabled(true)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
+        android.R.id.home -> { onBackPressed(); true }
+        else -> false
+    }
+}
+```
+
+当用户离开这个界面的时我们需要保存用户`preference`（偏好），所以我们需要像处理`Back`一样处理`Up`动作，重定向动作到`onBackPressed`。现在，让我们要创建一个XML布局。对于这个`preference`来说一个简单`EditText`就足够了：
+
+```
+// xml
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <include layout="@layout/toolbar"/>
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="?attr/actionBarSize"
+        android:padding="@dimen/spacing_xlarge">
+    
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/city_zipcode"/>
+        
+        <EditText
+            android:id="@+id/cityCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/city_zipcode"
+            android:inputType="number"/>
+
+    </LinearLayout>
+</FrameLayout>
+```
+
+然后只需要在`AndroidManifest.xml`中声明这个activity：
+
+```
+// xml
+<activity
+    android:name=".ui.activities.SettingsActivity"
+    android:label="@string/settings"/>
+```
+
+## 访问Shared Preferences
+
+你可能知道什么是Android Shared Preferences。可以通过Android框架简单存储的一系列key和value对。这些`preferences`与SDK的一部分融为一体，使得任务变得更加容易。而且从Android 6.0（Marshmallow），`shared preferences`可以自动被云存储，所以当一个用户在一个新的设备上面恢复App的时候，它们的`preferences`也会被恢复。
+
+多亏使用了属性委托，我们可以使用非常简单的方式来处理`preferences`。我们可以创建一个委托，当`get`被调用时去查询，当`set`被调用时去执行保存操作。
+
+因为我们想去保存`zip code`，它是一个long型，所以让我们创建一个Long属性的委托吧。在`DelegatesExtensions.kt`中，实现一个新的`LongPreference`类：
+
+```
+// kotlin
+class LongPreference(val context: Context, val name: String, val default: Long)
+    :  ReadWriteProperty<Any?, Long> {
+
+    val prefs by lazy {
+        context.getSharedPreferences("default", Context.MODE_PRIVATE)
+    }
+
+    override fun getValue(thisRef: Any?, property: KProperty<*>): Long {
+        return prefs.getLong(name, default)
+    }
+    
+    override fun setValue(thisRef: Any?, property: KProperty<*>, value: Long) {
+        prefs.edit().putLong(name, value).apply()
+    }
+}
+```
+
+首先，我们使用`lazy`委托的方式创建一个preferences。这样的话，如果我们没有使用这个属性，这个委托就不会请求这个`SharedPreferences`对象。
+
+当`get`被调用，它的实现是使用preferences实例去获取一个委托声明中指定名字的long属性，如果没有找到这个属性，则默认使用default。当一个值被`set`，拿到`preferences editor`并使用属性名保存。
+
+我们可以在`DelegatesExt`中定义一个新的委托，这样我们访问时就简单很多：
+
+```
+// kotlin
+object DelegatesExt {
+    ....
+    fun longPreference(context: Context, name: String, default: Long) =
+        LongPreference(context, name, default)
+}
+```
+
+在`SettingActivity`，现在可以定义一个属性去处理`zip code`偏好。我创建了两个常量用来作为名字和属性的默认值。这种方式可以在App其他地方使用：
+
+```
+// kotlin
+companion object {
+    val ZIP_CODE = "zipCode"
+    val DEFAULT_ZIP = 94043L
+}
+
+var zipCode: Long by DelegatesExt.longPreference(this, ZIP_CODE, DEFAULT_ZIP)
+```
+
+现在preference工作起来就非常简单了，我们可以从属性中得到并赋值给`EditText`：
+
+```
+// kotlin
+override fun onCreate(savedInstanceState: Bundle?) {
+    ...
+    cityCode.setText(zipCode.toString())
+}
+```
+
+我们不能使用自动生成的属性`text`，因为`EditText`在`getText`中返回的是`Editable`，所以该属性默认为该值。如果我尝试去分配一个`String`，编译器会报错，使用`setText()`就足够了。
+
+现在具备了所有要实现`onBackPressed`的东西。这里，一个属性的新值会被储存：
+
+```
+// kotlin
+override fun onBackPressed() {
+    super.onBackPressed()
+    zipCode = cityCode.text.toString().toLong()
+}
+```
+
+`MainActivity`需要一些小的改变。首先，它也需要一个`zip code`属性。
+
+```
+// kotlin
+val zipCode: Long by DelegatesExt.longPreference(this, SettingsActivity.ZIP_CODE,
+            SettingsActivity.DEFAULT_ZIP)
+```
+
+然后，我把`forecast load`的代码移动到了`onResume`，这样每次activity resumed，它都会刷新数据，以防`code zip`被修改。当然这里有更加复杂一点的方式去做，比如通过在请求forecast之前检查是否`zip code`真的改变了。但是我像保持这个例子的简单性，而且因为请求的数据已经保存在本地数据库中了，所以这个解决方案也不算太坏：
+
+```
+// kotlin
+override fun onResume() {
+    super.onResume()
+    loadForecast()
+}
+
+private fun loadForecast() = async {
+    val result = RequestForecastCommand(zipCode).execute()
+    uiThread {
+        val adapter = ForecastListAdapter(result) {
+            startActivity<DetailActivity>(DetailActivity.ID to it.id,
+                    DetailActivity.CITY_NAME to result.city)
+        }
+        forecastList.adapter = adapter
+        toolbarTitle = "${result.city} (${result.country})"
+    } 
+}
+```
+
+`RequestForecastCommand`现在使用`zipCode`而不是之前的是一个固定值。
+
+这里还有意见我们必须要做的事情：当溢出菜单的`settings`点击时启动这个`setting activity`。在`ToolbarManager`中的`initToolbar`函数需要有一些小的修改：
+
+```
+// kotlin
+when (it.itemId) {
+    R.id.action_settings -> toolbar.ctx.startActivity<SettingsActivity>()
+    else -> App.instance.toast("Unknown option")
+}
+```
+
+## 泛型preference委托
+
+现在我们已经是泛型专家了，为什么不扩展`LongPreference`为支持所有`Shared Preferences`支持的类型呢？我们来创建一个`Preference`委托：
+
+```
+// kotlin
+class Preference<T>(val context: Context, val name: String, val default: T)
+    : ReadWriteProperty<Any?, T> {
+    
+    val prefs by lazy {
+        context.getSharedPreferences("default", Context.MODE_PRIVATE)
+    }
+    
+    override fun getValue(thisRef: Any?, property: KProperty<*>): T {
+        return findPreference(name, default)
+    }
+
+    override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+        putPreference(name, value)
+    }
+    ...
+}
+```
+
+这个preference与我们之前使用的非常相似。我们仅仅替换了`Long`为泛型类型`T`，然后调用了两个函数来做具体重要的工作。这些函数非常简单，尽管有些重复。它们会检查类型然后使用指定的方式来操作。比如，`findPrefernce`函数如下：
+
+```
+// kotlin
+private fun <T> findPreference(name: String, default: T): T = with(prefs) {
+        val res: Any = when (default) {
+        is Long -> getLong(name, default)
+        is String -> getString(name, default)
+        is Int -> getInt(name, default)
+        is Boolean -> getBoolean(name, default)
+        is Float -> getFloat(name, default)
+        else -> throw IllegalArgumentException(
+            "This type can be saved into Preferences")
+    }
+
+    res as T
+}
+```
+
+`putPreference`函数也是一样，但是在`when`最后通过`apply`，使用`preferences editor`保存结果：
+
+```
+// kotlin
+private fun <U> putPreference(name: String, value: U) = with(prefs.edit()) {
+    when (value) {
+        is Long -> putLong(name, value)
+        is String -> putString(name, value)
+        is Int -> putInt(name, value)
+        is Boolean -> putBoolean(name, value)
+        is Float -> putFloat(name, value)
+        else -> throw IllegalArgumentException("This type can not be saved into Preferences")
+    }.apply()
+}
+```
+
+现在修改`DelegateExt`：
+
+```
+// kotlin
+object DelegatesExt {
+    ...
+    fun preference<T : Any>(context: Context, name: String, default: T)
+        = Preference(context, name, default)
+}
+```

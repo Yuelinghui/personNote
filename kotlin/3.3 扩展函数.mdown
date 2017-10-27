@@ -1,0 +1,107 @@
+# 扩展函数
+
+扩展函数是指在一个类上增加一种新的行为，甚至我们没有这个类代码的访问权限。这是一个在缺少有用函数的类上扩展的方法。在Java中，通常会实现很多带有static方法的工具类。Kotlin中扩展函数的一个优势是我们不需要在调用方法的时候把整个对象当作参数传入。扩展函数表现得就像是属于这个类的一样，而且我们可以使用`this`关键字和调用所有public方法。
+
+举个例子，我们可以创建一个toast函数，这个函数不需要传入任何context，它可以被任何Context或者它的子类调用，比如Activity或者Service：
+
+```
+// kotlin
+fun Context.toast(message: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
+    Toast.makeText(this, message, duration).show()
+}
+```
+
+这个方法可以在Activity内部直接调用：
+
+```
+// kotlin
+toast("Hello world!")
+toast("Hello world!", Toast.LENGTH_LONG)
+```
+
+当然，Anko已经包括了自己的toast扩展函数，跟上面这个很相似。Anko提供了一些针对`CharSequence`和`resource`的函数，还有两个不同的toast和longToast方法：
+
+```
+// kotlin
+toast("Hello world!")
+longToast(R.id.hello_world)
+```
+
+扩展函数也可以是一个属性。所以我们可以通过相似的方法来扩展属性。下面的例子展示了使用他自己的getter/setter生成一个属性的方式。Kotlin由于互操作性的特性已经提供了这个属性，但理解扩展属性背后的思想是一个很不错的练习：
+
+```
+// kotlin
+public var TextView.text: CharSequence
+    get() = getText()
+    set(v) = setText(v)
+```
+
+扩展函数并不是真正地修改了原来的类，它是以静态导入的方式来实现的。扩展函数可以被声明在任何文件中，因此有个通用的实践是把一系列有关的函数放在一个新建的文件里。
+
+这是Anko功能背后的魔法。现在通过以上，你也可以自己创建你的魔法。
+
+## 扩展语言
+
+多亏这些改变，我们可以去创建自己的`builder`和代码块。我们已经在使用一些有趣的函数，比如`with`。如下简单的实现：
+
+```
+// kotlin
+inline fun <T> with(t: T, body: T.() -> Unit) { t.body() }
+```
+
+这个函数接收一个`T`类型的对象和一个被作为扩展函数的函数。它的实现仅仅是让这个对象去执行这个函数。因为第二个参数是一个函数，所以我们可以把它放在圆括号外面，所以我们可以创建一个代码块，在这这个代码块中我们可以使用`this`和直接访问所有的public的方法和属性：
+
+```
+// kotlin
+with(forecast) {
+    Picasso.with(itemView.ctx).load(iconUrl).into(iconView)
+    dateView.text = date
+    descriptionView.text = description
+    maxTemperatureView.text = "$high"
+    minTemperatureView.text = "$low"
+    itemView.setOnClickListener { itemClick(this) }
+}
+```
+
+## 内联函数
+
+内联函数与普通的函数有点不同。一个内联函数会在编译的时候被替换掉，而不是真正的方法调用。这在一些情况下可以减少内存分配和运行时开销。举个例子，如果我们有一个函数，只接收一个函数作为它的参数。如果是一个普通的函数，内部会创建一个含有那个函数的对象。另一方面，内联函数会把我们调用这个函数的地方替换掉，所以它不需要为此生成一个内部的对象。
+
+另一个例子：我们可以创建代码块只提供`Lollipop`或者更高版本来执行：
+
+```
+// kotlin
+inline fun supportsLollipop(code: () -> Unit) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        code()
+    }
+}
+```
+
+它只是检查版本，然后如果满足条件则去执行。现在我们可以这么做：
+
+```
+// kotlin
+supportsLollipop {
+    window.setStatusBarColor(Color.BLACK)
+}
+```
+
+举个例子，Anko也是基于这个思想来实现`Android Layout`的`DSL`化。你也可以查看`Kotlin reference`中[`使用DSL来编写HTML`]( http://kotlinlang.org/docs/reference/type-safe-builders.html)的一个例子。
+
+## 扩展函数中的操作符
+
+我们不需要去扩展我们自己的类，但是我需要去使用扩展函数扩展我们已经存在的类来让第三方的库能提供更多的操作。几个例子，我们可以去像访问List的方式去访问`ViewGroup`的view：
+
+```
+// kotlin
+operator fun ViewGroup.get(position: Int): View = getChildAt(position)
+```
+
+现在真的可以非常简单地从一个`ViewGroup`中通过position得到一个view：
+
+```
+// kotlin
+val container: ViewGroup = find(R.id.container)
+val view = container[2]
+```

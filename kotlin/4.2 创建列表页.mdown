@@ -1,0 +1,86 @@
+# 创建一个layout
+
+显示天气预报的列表我们使用`RecyclerView`，所以你需要在`build.gradle`中增加一个新的依赖：
+
+```
+// groovy
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile "com.android.support:appcompat-v7:$support_version" 
+    compile "com.android.support:recyclerview-v7:$support_version" ...
+}
+```
+
+然后，`activity_main.xml`如下：
+
+```
+// xml
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent">
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/forecast_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+</FrameLayout>
+```
+
+在`Mainactivity.kt`中删除掉之前用来测试的能正常运行的所有代码（现在应该会提示错误）。暂且我们使用老的`findViewByid()`的方式：
+
+```
+// kotlin
+val forecastList = findViewById(R.id.forecast_list) as RecyclerView
+forecastList.layoutManager = LinearLayoutManager(this)
+```
+
+如你所见，我们定义类一个变量并转型为`RecyclerView`。这里与Java有点不同，我们会在下一章分析这些不同之处。`LayoutManager`会通过属性的方式被设置，而不是通过setter，这个layout已经足够显示一个列表了。
+
+## 对象实例化
+
+对象实例化也是与Java中有些不同。如你所见，我们去掉了`new`关键字。这时构造函数仍然会被调用，但是我们省略了宝贵的四个字符。`LinearLayoutManager(this)`创建了一个对象的实例。
+
+## The Recycler Adapter
+
+`RecyclerView`中所使用到的布局现在只需要一个`TextView`，我会手动去创建这个简单的文本列表。增加一个名为`ForecastListAdapter.kt`的Kotlin文件，包括如下代码：
+```
+// kotlin
+class ForecastListAdapter(val items: List<String>) :
+        RecyclerView.Adapter<ForecastListAdapter.ViewHolder>() {
+        
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        return ViewHolder(TextView(parent.context))
+    }
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.textView.text = items.[position]
+    }
+    
+    override fun getItemCount(): Int = items.size
+    
+    class ViewHolder(val textView: TextView) : RecyclerView.ViewHolder(textView)
+}
+```
+
+又是如此，我们可以像访问属性一样访问context和text。你可以保持以往那样操作（使用getters和setters）,但是你会得到一个编译器的警告。如果你还是倾向于Java中的使用方式，这个检查可以被关闭。但是一旦你使用上了这种属性调用的方式你就会爱上它，而且它也节省了额外的字符总量。
+
+回到`MainActivity`，现在简单地创建一系列的String放入List中，然后使用创建分配Adapter实例。
+
+```
+// kotlin
+private val items = listOf(
+    "Mon 6/23 - Sunny - 31/17",
+    "Tue 6/24 - Foggy - 21/8",
+    "Wed 6/25 - Cloudy - 22/17",
+    "Thurs 6/26 - Rainy - 18/11",
+    "Fri 6/27 - Foggy - 21/10",
+    "Sat 6/28 - TRAPPED IN WEATHERSTATION - 23/18",
+    "Sun 6/29 - Sunny - 20/7"
+    )
+    
+override fun onCreate(savedInstanceState: Bundle?) {
+    ...
+    val forecastList = findViewById(R.id.forecast_list) as RecyclerView
+    forecastList.layoutManager = LinearLayoutManager(this) 
+    forecastList.adapter = ForecastListAdapter(items)
+}
+    
+```

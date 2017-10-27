@@ -1,0 +1,97 @@
+# 怎么去使用Kotlin Android Extensions
+
+
+另一个Kotlin团队研发的可以让开发更简单的插件是`Kotlin Android Extensions`。当前仅仅包括了view的绑定。这个插件自动创建了很多的属性来让我们直接访问XML中的view。这种方式不需要你在开始使用之前明确地从布局中去找到这些views。
+
+这些属性的名字就是来自对应view的id，所以我们取id的时候要十分小心，因为它们将会是我们类中非常重要的一部分。这些属性的类型也是来自XML中的，所以我们不需要去进行额外的类型转换。
+
+`Kotlin Android Extensions`的一个优点是它不需要在我们的代码中依赖其它额外的库。它仅仅由插件组层，需要时用于生成工作所需的代码，只需要依赖于Kotlin的标准库。
+
+那它背后是怎么工作的？该插件会代替任何属性调用函数，比如获取到view并具有缓存功能，以免每次属性被调用都会去重新获取这个view。需要注意的是这个缓存装置只会在`Activity`或者`Fragment`中才有效。如果它是在一个扩展函数中增加的，这个缓存就会被跳过，因为它可以被用在`Activity`中但是插件不能被修改，所以不需要再去增加一个缓存功能。
+
+当我们创建这个项目，我们就已经在`build.gradle`中增加了这个依赖：
+
+```
+// groovy
+buldscript{
+	repositories {
+		jcenter()
+	}
+	dependencies {
+		classpath "org.jetbrains.kotlin:kotlin-android-extensions:$kotlin_version"
+	}
+}
+```
+
+唯一一件需要这个插件做的事情是在类中增加一个特定的"手工"`import`来使用这个功能。我们有两个方法来使用它：
+
+## `Activities`或者`Fragments`的`Android Extensions`
+
+这是最典型的使用方式。它们可以作为`activity`或`fragment`的属性是可以被访问的。属性的名字就是XML中对应view的id。
+
+我们需要使用的`import`语句以`kotlin.android.synthetic`开头，然后加上我们要绑定到Activity的布局XML的名字：
+
+```
+// kotlin
+import kotlinx.android.synthetic.activity_main.*
+```
+
+此后，我们就可以在`setContentView`被调用后访问这些view。新的Android Studio版本中可以通过使用`include`标签在Activity默认布局中增加内嵌的布局。很重要的一点是，针对这些布局，我们也需要增加手工的import：
+
+```
+// kotlin
+import kotlinx.android.synthetic.activity_main.*
+import kotlinx.android.synthetic.content_main.*
+```
+
+## `Views`的`Android Extensions`
+
+前面说的使用还是有局限性的，因为可能有很多代码需要访问XML中的view。比如，一个自定义view或者一个adapter。举个例子，绑定一个xml中的view到另一个view。唯一不同的就是需要`import`：
+
+```
+// kotlin
+import kotlinx.android.synthetic.view_item.view.*
+```
+
+如果我们需要一个adapter，比如，我们现在要从inflater的View中访问属性：
+
+```
+// kotlin
+view.textView.text = "Hello"
+```
+
+## 测试是否一切就绪
+
+我们想再将编写一些代码来测试Kotlin Android Extensions是否在工作。我现在还不会对这些代码做解释，但是我想要确保它们在你的环境中是正常运行的。这可能是配置中最难的一部分。
+
+首先，打开`activity_main.xml`，然后设置TextView的id：
+```
+// xml
+<TextView
+    android:id="@+id/message"
+    android:text="@string/hello_world"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"/>
+```
+
+然后，手动在Activity中增加一个import语句（不要担心你现在对这个还不太理解）。
+
+```
+// kotlin
+import kotlinx.android.synthetic.main.activity_main.*
+```
+
+在`onCreate`中，你现在可以直接得到并访问这个TextView了。
+
+```
+// kotlin
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    setContentView(R.layout.activity_main)
+    message.text = "Hello Kotlin!"
+}
+```
+
+多亏Kotlin和Java之间的互操作性，我们可以在Kotlin中像操作属性一样去操作Java库中的getter/setter方法。我们之后再去讲解属性，但是我想提醒的是，我们可以使用`message.text`来代替`message.setText`。编译器将会把它转换成一般的Java代码，所以这样使用是没有任何性能开销的。
+
+现在运行这个app，并且它是正常运行的。检查TextView是否是显示的新的内容。

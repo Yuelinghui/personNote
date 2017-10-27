@@ -1,0 +1,217 @@
+# Flow control和ranges
+
+我在我们的代码中使用了一些条件表达式，但是现在是时候去更深地去解释它们了。我们通常都在使用过程式编程语言的时候很少地去使用代码流控制的机制去编写（有些过程式编程语言中几乎已消失），但是它们还是很有用的。这也是一个新的强大的想法让解决一些特定的情况下的问题变得更容易。
+
+## If表达式
+
+在Kotlin中一切都是表达式，也就是说一切都返回一个值。如果`if`条件不含有一个exception，那我们可以像我们平时那样使用它：
+
+```
+// kotlin
+if(x>0){
+    toast("x is greater than 0")
+}else if(x==0){ 
+    toast("x equals 0")
+}else{
+    toast("x is smaller than 0")
+}
+```
+
+我们也可以把结果赋值给一个变量。我们在我们的代码中使用了很多次：
+
+```
+// kotlin
+val res = if (x != null && x.size() >= days) x else null
+```
+
+这也说明我也不需要像Java那种有一个三元操作符，因为我们可以使用它来简单实现：
+
+```
+// kotlin
+val z = if (condition) x else y
+```
+
+所以`if`表达式总是返回一个value。如果一个分支返回了Unit，那整个表达式也将返回Unit，它是可以被忽略的，这种情况下它的用法也就跟一般Java中的`if`条件一样了。
+
+## When表达式
+
+`when`表达式与Java中的`switch/case`类似，但是要强大得多。这个表达式会去试图匹配所有可能的分支直到找到满意的一项。然后它会运行右边的表达式。与Java的`switch/case`不同之处是参数可以是任何类型，并且分支也可以是一个条件。
+
+对于默认的选项，我们可以增加一个`else`分支，它会在前面没有任何条件匹配时再执行。条件匹配成功后执行的代码也可以是代码块：
+
+```
+// kotlin
+when (x){
+    1 -> print("x == 1") 
+    2 -> print("x == 2") 
+    else -> {
+        print("I'm a block")
+        print("x is neither 1 nor 2")
+    }
+}
+```
+
+因为它是一个表达式，它也可以返回一个值。我们需要考虑什么时候作为一个表达式使用，它必须要覆盖所有分支的可能性或者实现`else`分支。否则它不会被编译成功：
+
+```
+// kotlin
+val result = when (x) {
+    0, 1 -> "binary"
+    else -> "error"
+}
+```
+
+如你所见，条件可以是一系列被逗号分割的值。但是它可以更多的匹配方式。比如，我们可以检测参数类型并进行判断：
+
+```
+// kotlin
+when(view) {
+    is TextView -> view.setText("I'm a TextView")
+    is EditText -> toast("EditText value: ${view.getText()}")
+    is ViewGroup -> toast("Number of children: ${view.getChildCount()} ")
+    else -> view.visibility = View.GONE
+}
+```
+
+再条件右边的代码中，参数会被自动转型，所以你不需要去明确地做类型转换。
+
+它还让检测参数否在一个数组范围甚至是集合范围成为可能（我会在这章节的后面讲这个）：
+
+```
+// kotlin
+val cost = when(x) {
+    in 1..10 -> "cheap"
+    in 10..100 -> "regular"
+    in 100..1000 -> "expensive"
+    in specialValues -> "special value!"
+    else -> "not rated"
+}
+```
+
+或者你甚至可以从对参数做需要的几乎疯狂的检查摆脱出来。它可以使用简单的`if/else`链替代：
+
+```
+// kotlin
+valres=when{
+    x in 1..10 -> "cheap"
+    s.contains("hello") -> "it's a welcome!"
+    v is ViewGroup -> "child count: ${v.getChildCount()}"
+    else -> ""
+}
+```
+
+## For循环
+
+虽然你在使用了collections的函数操作符之后不会再过多地使用for循环，但是for循环再一些情况下仍然是很有用的。提供一个迭代器它可以作用在任何东西上面：
+
+```
+// kotlin
+for (item in collection) {
+    print(item)
+}
+```
+
+如果你需要更多使用index的典型的迭代，我们也可以使用`ranges`（反正它通常是更加智能的解决方案）：
+
+```
+// kotlin
+for (index in 0..viewGroup.getChildCount() - 1) {
+    val view = viewGroup.getChildAt(index)
+    view.visibility = View.VISIBLE
+}
+```
+
+在我们迭代一个array或者list，一系列的index可以用来获取到指定的对象，所以上面的方式不是必要的：
+
+```
+// kotlin
+for (i in array.indices) {
+    print(array[i])
+}
+```
+
+## While和do/while循环
+
+你也可以使用`while`循环，尽管它们两个都不是特别常用的。它们通常可以更简单、视觉上更容易理解的方式去解决一个问题，两个例子：
+
+```
+// kotlin
+while(x > 0){ 
+    x--
+}
+
+do{
+    val y = retrieveData()
+} while (y != null) // y在这里是可见的!
+```
+
+## Ranges
+
+很难解释`control flow`，如果不去讲讲`ranges`的话。但是它们的范围要宽得多。`Range`表达式使用一个`..`操作符，它是被定义实现了一个`RangTo`方法。
+
+`Ranges`帮助我们使用很多富有创造性的方式去简化我们的代码。比如我们可以把它：
+
+```
+// kotlin
+if(i >= 0 && i <= 10) 
+    println(i)
+```
+
+转化成：
+
+```
+// kotlin
+if (i in 0..10)
+    println(i)
+```
+
+`Range`被定义为可以被比较的任意类型，但是对于数字类型，比较器会通过转换它为简单的类似Java代码来避免额外开销的方式来优化它。数字类型的`ranges`也可以被迭代，编译器会转换它们为与Java中使用index的for循环的相同字节码的方式来进行优化：
+
+```
+// kotlin
+for (i in 0..10)
+    println(i)
+```
+
+`Ranges`默认会自增长，所以如果像以下的代码：
+
+```
+// kotlin
+for (i in 10..0)
+    println(i)
+```
+
+它就不会做任何事情。但是你可以使用`downTo`函数：
+
+```
+// kotlin
+for(i in 10 downTo 0)
+    println(i)
+```
+
+我们可以在`range`中使用`step`来定义一个从1到一个值的不同的空隙：
+
+```
+// kotlin
+for (i in 1..4 step 2) println(i)
+
+for (i in 4 downTo 1 step 2) println(i)
+```
+
+如果你想去创建一个open range（不包含最后一项，译者注：类似数学中的开区间），你可以使用`until`函数：
+
+```
+// kotlin
+for (i in 0 until 4) println(i)
+```
+
+这一行会打印从0到3，但是会跳过最后一个值。这也就是说`0 until 4 == 0..3`。在一个list中迭代时，使用`(i in 0 until list.size)`比`(i in 0..list.size - 1)`更加容易理解。
+
+就如之前所提到的，使用`ranges`确实有富有创造性的方式。比如，一个简单的方式去从一个`ViewGroup`中得到一个Views列表可以这么做：
+
+```
+// kotlin
+val views = (0..viewGroup.childCount - 1).map { viewGroup.getChildAt(it) }
+```
+
+混合使用`ranges`和`函数操作符`可以避免我们使用明确地循环去迭代一个集合，还有明确地去创建一个我们用来添加views的list。所有的事情都在一行代码中做好了。

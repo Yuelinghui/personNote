@@ -1,0 +1,294 @@
+# 使Forecast list可点击
+
+作为一个真正的app，当前列表的每一个item布局应该做一些工作。第一件事就是创建一个合适的XML，能符合我们的需要就行。我们希望显示一个图标，日期，描述以及最高和最低温度。所以让我们创建一个名为`item_forecast.xml`的layout：
+
+```
+// xml
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="@dimen/spacing_xlarge"
+    android:background="?attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+    
+    <ImageView
+        android:id="@+id/icon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        tools:src="@mipmap/ic_launcher"/>
+    
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginLeft="@dimen/spacing_xlarge"
+        android:layout_marginRight="@dimen/spacing_xlarge"
+        android:orientation="vertical">
+    
+    <TextView
+        android:id="@+id/date"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        tools:text="May 14, 2015"/>
+    
+    <TextView
+        android:id="@+id/description"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+        tools:text="Light Rain"/>
+    
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+    
+    <TextView
+        android:id="@+id/maxTemperature"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        tools:text="30"/>
+    
+    <TextView
+        android:id="@+id/minTemperature"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.AppCompat.Caption"
+        tools:text="15"/>
+    
+    </LinearLayout>
+</LinearLayout>
+```
+
+Domain model和数据映射时必须生成完整的图标uil，所以我们可以这样去加载它：
+
+```
+// kotlin
+data class Forecast(val date: String, val description: String,
+                    val high: Int, val low: Int, val iconUrl: String)
+```
+
+在`ForecastDataMapper`中：
+
+```
+// kotlin
+private fun convertForecastItemToDomain(forecast: Forecast): ModelForecast {
+    return ModelForecast(convertDate(forecast.dt),
+            forecast.weather[0].description, forecast.temp.max.toInt(),
+            forecast.temp.min.toInt(), generateIconUrl(forecast.weather[0].icon))
+}
+
+private fun generateIconUrl(iconCode: String): String
+        = "http://openweathermap.org/img/w/$iconCode.png"
+```
+
+我们从第一个请求中得到图标的code，用来组成完成的图标url。加载图片最简单的方式是使用图片加载库。[`Picasso`](http://square.github.io/picasso/)是一个不错的选择。它需要加到`build.gradle`的依赖中：
+
+```
+// groovy
+compile "com.squareup.picasso:picasso:<version>"
+```
+
+如此，Adapter也需要一个大的改动了。还需要一个click listener，我们来定义它：
+
+```
+// kotlin
+public interface OnItemClickListener {
+     operator fun invoke(forecast: Forecast)
+}
+```
+
+如果你还记得上一课程，当被调用时`invoke`方法可以被省略。所以我们来使用它来简化。listener可以被以下两种方式调用：
+
+```
+// kotlin
+itemClick.invoke(forecast)
+itemClick(forecast)
+```
+
+`ViewHolder`将负责去绑定数据到新的View：
+
+```
+// kotlin
+class ViewHolder(view: View, val itemClick: OnItemClickListener) :
+                RecyclerView.ViewHolder(view) {
+    private val iconView: ImageView
+    private val dateView: TextView
+    private val descriptionView: TextView
+    private val maxTemperatureView: TextView
+    private val minTemperatureView: TextView
+
+    init {
+        iconView = view.find(R.id.icon)
+        dateView = view.find(R.id.date)
+        descriptionView = view.find(R.id.description)
+        maxTemperatureView = view.find(R.id.maxTemperature)
+        minTemperatureView = view.find(R.id.minTemperature)
+    }
+
+    fun bindForecast(forecast: Forecast) {
+        with(forecast) {
+            Picasso.with(itemView.ctx).load(iconUrl).into(iconView)
+            dateView.text = date
+            descriptionView.text = description
+            maxTemperatureView.text = "${high.toString()}"
+            minTemperatureView.text = "${low.toString()}"
+            itemView.setOnClickListener { itemClick(forecast) }
+        }
+    }
+}
+```
+
+现在Adapter的构造方法接收一个`itemClick`。创建和绑定数据也是更简单：
+
+```
+// kotlin
+public class ForecastListAdapter(val weekForecast: ForecastList,
+         val itemClick: ForecastListAdapter.OnItemClickListener) :
+        RecyclerView.Adapter<ForecastListAdapter.ViewHolder>() {
+        
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int):
+            ViewHolder {
+        val view = LayoutInflater.from(parent.ctx)
+            .inflate(R.layout.item_forecast, parent, false)
+        return ViewHolder(view, itemClick)
+    }
+    
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bindForecast(weekForecast[position])
+    }
+    ...
+}
+```
+
+如果你使用了上面这些代码，`parent.ctx`不会被编译成功。Anko提供了大量的扩展函数来让Android编程更简单。举个例子，activitys、fragments以及其它包含了`ctx`这个属性，通过`ctx`这个属性来返回context，但是在View中缺少这个属性。所以我们要创建一个新的名叫`ViewExtensions.kt`文件来代替`ui.utils`，然后增加这个扩展属性：
+
+```
+// kotlin
+val View.ctx: Context
+    get() = context
+```
+
+从现在开始，任何View都可以使用这个属性了。这个不是必须的，因为你可以使用扩展的context属性，但是我觉得如果我们使用`ctx`的话在其它类中也会更有连贯性。而且，这是一个很好的怎么去使用扩展属性的例子。
+
+最后，MainActivity调用setAdapter，最后结果是这样的：
+```
+// kotlin
+forecastList.adapter = ForecastListAdapter(result,
+        object : ForecastListAdapter.OnItemClickListener{
+            override fun invoke(forecast: Forecast) {
+                toast(forecast.date)
+            }
+        })
+```
+
+
+## 简化setOnClickListener()
+
+我们用Android中非常典型的例子去解释它是怎么工作的：`View.setOnClickListener()`方法。如果我们想用Java的方式去增加点击事件的回调，我首先要编写一个`OnClickListener`接口：
+
+```
+// java
+public interface OnClickListener {
+    void onClick(View v);
+}
+```
+
+然后我们要编写一个匿名内部类去实现这个接口：
+
+```
+// java
+view.setOnClickListener(new OnClickListener(){
+	@Override
+	public void onClick(View v) {
+		Toast.makeText(v.getContext(), "Click", Toast.LENGTH_SHORT).show();
+	}
+})
+```
+
+我们将把上面的代码转换成Kotlin（使用了Anko的toast函数）：
+
+```
+// kotlin
+view.setOnClickListener(object : OnClickListener {
+	override fun onClick(v: View) {
+		toast("Click")
+	}
+}
+```
+
+很幸运的是，Kotlin允许Java库的一些优化，Interface中包含单个函数可以被替代为一个函数。如果我们这么去定义了，它会正常执行：
+
+```
+// kotlin
+fun setOnClickListener(listener: (View) -> Unit)
+```
+
+一个lambda表达式通过参数的形式被定义在箭头的左边（被圆括号包围），然后在箭头的右边返回结果值。在这个例子中，我们接收一个View，然后返回一个Unit（没有东西）。所以根据这种思想，我们可以把前面的代码简化成这样：
+
+```
+// kotlin
+view.setOnClickListener({ view -> toast("Click")})
+```
+
+这是非常棒的简化！当我们定义了一个方法，我们必须使用大括号包围，然后在箭头的左边指定参数，在箭头的右边返回函数执行的结果。如果左边的参数没有使用到，我们甚至可以省略左边的参数：
+
+```
+// kotlin
+view.setOnClickListener({ toast("Click") })
+```
+
+如果这个函数的最后一个参数是一个函数，我们可以把这个函数移动到圆括号外面：
+
+```
+// kotlin
+view.setOnClickListener() { toast("Click") }
+```
+
+并且，最后，**如果这个函数只有一个参数，我们可以省略这个圆括号**：
+
+```
+// kotlin
+view.setOnClickListener { toast("Click") }
+```
+
+比原始的Java代码简短了5倍多，并且更加容易理解它所做的事情。非常让人影响深刻。
+
+## ForecastListAdapter的click listener
+
+在前面一章，我这么艰苦地写了click listener的目的就是更好的在这一章中进行开发。然而现在是时候把你学到的东西用到实践中去了。我们从ForecastListAdapter中删除了listener接口，然后使用lambda代替：
+
+```
+// kotlin
+public class ForecastListAdapter(val weekForecast: ForecastList,
+                                 val itemClick: (Forecast) -> Unit)
+```
+
+这个itemClick函数接收一个`forecast`参数然后不返回任何东西。`ViewHolder`中也可以这么修改：
+
+```
+// kotlin
+class ViewHolder(view: View, val itemClick: (Forecast) -> Unit)
+```
+
+其它的代码保持不变。仅仅改变`MainActivity`：
+
+```
+// kotlin
+val adapter = ForecastListAdapter(result) { forecast -> toast(forecast.date) }
+```
+
+我们可以简化最后一句。如果这个函数只接收一个参数，那我们可以使用`it`引用，而不用去指定左边的参数。所以我们可以这么做：
+
+```
+// kotlin
+val adapter = ForecastListAdapter(result) { toast(it.date) }
+```

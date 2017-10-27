@@ -1,0 +1,259 @@
+# 测试你的App
+
+我们即将到达这次旅程的结尾。通过本书你已经学习了大部分Kotlin的知识，但是你可能会怀疑你是否可以测试你只用Kotlin编写的Android App呢？回答是：当然！
+
+在Android中我们有两种不同的测试：`unit test`和`instrumentation test`。很明显本书不会来教你怎么去测试的，有很多专门为此写的书。我在这一章的目标是怎么去搭建你测试环境，展示给你看Kotlin在测试方面也能很好的工作。
+
+## Unit testing
+
+我不会对`unit testing`（单元测试）是什么的话题展开讨论。存在很多定义，但是都有一些细微的不同。一个普通的观点可能是`unit testing`验证一个单位（`unit`）的源代码的测试。一个单位（`unit`）包含什么就留给读者了。在我们的例子中，我仅仅去定义了一个`unit test`作为一个不需要设备运行的测试。IDE将会运行这些测试然后显示最后的结果分辩哪些测试成功哪些测试失败了。
+
+`Unit testing`通常使用`JUnit`库。所以让我们增加这个依赖到`build.gradle`。因为这个依赖只会在跑测试的时候才会用到，所以我们可以使用`testCompile`而不是`compile`。用这种方式，这个库会在正式编译时忽略掉，可以减少APK的大小：
+
+```
+// groovy
+dependencies {
+    ...
+    testCompile 'junit:junit:4.12'
+}
+```
+
+现在同步gradle来获取该库并加入到你的项目中。为了开启`unit testing`，打开`Build Variants`tab（你可能可以在IDE的左边找到它），点击`Test Artifact`下拉，你应该选择`Unit Tests`。
+
+另一件你需要做的事情是创建一个新的文件夹。在src下面，你可能已经有`androidTest`和`main`了。创建另一个名为`test`的文件夹，再在它下面创建一个`java`文件夹。所以现在你应该有一个名为`src/test/java`绿色的文件夹。这是IDE发现我们在使用`Unit Test`模式好的迹象，这个文件夹中将会包括一些测试文件。
+
+我们来写一个非常简单的测试来看看一切是不是正常运行了。使用合适的包名（我的是`com.antonioleiva.weatherapp`，但是你需要使用你app中的主包名）创建一个新的名为`SimpleTest`的Kotlin类。当你创建完，编写如下简单的测试：
+
+```
+// kotlin
+import org.junit.Test
+import kotlin.test.assertTrue
+class SimpleTest {
+    @Test fun unitTestingWorks() {
+        assertTrue(true)
+    }
+}
+```
+
+使用`@Test`注解来辨别该函数为是一个测试。确认是`org.unit.Test`。然后增加一个简单的断言。它只是判断了true是否是true，它显然会成功。这个测试只是用开确认一切配置正确。
+
+执行测试，只需要在你在`test`下创建的新的`java`文件夹上右击，然后选择`Run All Tests`。当编译完成后，它会运行测试并会看见结果简介的显示。你应该可以看见我们的测试通过了。
+
+现在是时候创建一个真正的测试了。所有使用Android框架来处理的测试可能都需要一个`instrumentation test`或者使用更复杂的像[Robolectric](http://robolectric.org/)库。所以在这些例子中我会不使用框架的任何东西。举个例子，我将测试从`Long`转`String`的扩展函数。
+
+创建一个新的名为`ExtensionTests`的文件，然后增加如下测试：
+
+```
+// kotlin
+class ExtensionsTest {
+    
+    @Test fun testLongToDateString() {
+        assertEquals("Oct 19, 2015", 1445275635000L.toDateString())
+    }
+
+    @Test fun testDateStringFullFormat() {
+        assertEquals("Monday, October 19, 2015",
+            1445275635000L.toDateString(DateFormat.FULL))
+    }
+}
+```
+
+这些测试检测`Long`实例是否可以转换成一个`String`。第一个测试默认行为（使用DateFormat.MEDIUM)），而第二个指定一个不同的格式。运行这些测试然后你会看到它们都通过了。我建议你修改它们然后看看它们失败是怎么样的。
+
+如果你在Java中使用过测试，你将会发现这并没有什么太多的不同。我会演示一个简单的例子，我们可以对`ForecastProvider`进行一些测试。我们可以使用`Mockito`库来模拟其它的类然后独立测试provider：
+
+```
+// groovy
+dependencies {
+    ...
+    testCompile "junit:junit:4.12"
+    testCompile "org.mockito:mockito-core:1.10.19"
+}
+```
+
+现在创建了一个`ForecastProviderTest`。我们要去测试`ForecastProvider`，使用`DataSource`来返回结果，看它结果是否为null。所以首先我们需要模拟一个`ForecastDataSource`：
+
+```
+// kotlin
+val ds = mock(ForecastDataSource::class.java)
+`when`(ds.requestDayForecast(0)).then {
+    Forecast(0, 0, "desc", 20, 0, "url")
+}
+```
+
+如你所见，我们需要在`when`上加反引号。因为`when`在Kotlin中是一个保留关键字，所以如果我们在一些Java代码中使用到它我们需要避免它。现在我们用这个数据源创建了一个provider，然后检测调用那个方法之后的结果是否为null：
+
+```
+// kotlin
+val provider = ForecastProvider(listOf(ds))
+assertNotNull(provider.requestForecast(0))
+```
+
+这是完整的测试函数：
+
+```
+// kotlin
+@Test fun testDataSourceReturnsValue() {
+    val ds = mock(ForecastDataSource::class.java)
+    `when`(ds.requestDayForecast(0)).then {
+           Forecast(0, 0, "desc", 20, 0, "url")
+    }
+    
+    val provider = ForecastProvider(listOf(ds))
+    assertNotNull(provider.requestForecast(0))
+}
+```
+
+如果你运行它，你将会看见它会出错。多亏这个测试，我们在自己的代码中发现了某些错误。测试失败是因为`ForecastProvider`在使用之前正在它的`companion object`中初始化。我们可以通过构造函数的方式在`ForecastProvider`中增加一些数据源，这个静态的List就永远不会被使用，所以它应该是使用`lazy`加载：
+
+```
+// kotlin
+companion object {
+    val DAY_IN_MILLIS = 1000 * 60 * 60 * 24
+    val SOURCES by lazy { listOf(ForecastDb(), ForecastServer()) }
+}
+```
+
+如果你现在再次去运行，你会发现现在会通过所有的测试。
+我们也可以测试一些比如当数据源返回null的时候，它会便利下一个数据源来得到结果：
+
+```
+// kotlin
+@Test fun emptyDatabaseReturnsServerValue() {
+    val db = mock(ForecastDataSource::class.java)
+    val server = mock(ForecastDataSource::class.java)
+    `when`(server.requestForecastByZipCode(
+            any(Long::class.java), any(Long::class.java)))
+            .then {
+                ForecastList(0, "city", "country", listOf())
+    val provider = ForecastProvider(listOf(db, server))
+    assertNotNull(provider.requestByZipCode(0, 0))
+}
+```
+
+如你所见，通过使用参数的默认值这种简单的依赖倒置足够让我们实现一些简单的`unit tests`。对于这个provider还有很多我们可以测试的东西，但是这个例子足够让我们学会使用`unit testing`工具了。
+
+
+## Instrumentation tests
+
+`Instrumentation tests`有一点不同。它们通常被使用在UI交互上，我们需要一个应用程序实例跑的同时执行测试。达到这个，我们就需要在设备上部署并运行。
+
+这类的测试必须要放在`androidTest`文件夹中，我们必须要修改`Build Variants`区域的`Test Artifact`为`Android Instrumentation Tests`。实现instrumentation的官方库是[Espresso]，它通过`Actions`、`filter`以及检测结果的`ViewMatchers`和`Matchers`可以帮助我们更简单地使用。
+
+配置比之前更加难一点。我们需要下载额外的库和`Gradle`的配置。好事是Kotlin的测试不需要添加额外的东西，所以如果你已经知道怎么去配置`Espresso`，它将对你来说是很简单的。
+
+首先，在`defaultConfig`中指定`test runner`：
+
+```
+// groovy
+defaultConfig {
+    ...
+    testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+}
+```
+
+当你处理完该runner，然后增加其它的依赖，这次是用`androidTestCompile`。这种方式，这些库只会再编译运行`instrumentation tests`的时候才被增加：
+
+```
+// groovy
+dependencies {
+    ...
+    androidTestCompile "com.android.support:support-annotations:$support_version"
+    androidTestCompile "com.android.support.test:runner:0.4.1"
+    androidTestCompile "com.android.support.test:rules:0.4.1"
+    androidTestCompile "com.android.support.test.espresso:espresso-core:2.2.1"
+    androidTestCompile ("com.android.support.test.espresso:espresso-contrib:2.2.1"){
+        exclude group: 'com.android.support', module: 'appcompat'
+        exclude group: 'com.android.support', module: 'support-v4'
+        exclude module: 'recyclerview-v7'
+}
+```
+
+我不想花大量的时间去讲这些，但是这里有为什么需要这些库的简短原因：
+
+- `support-annotations`：其它库中需要使用到。
+- `runner`：这是`test runner`，就是我们再`defaultConfig`中指定的那个。
+- `rules`：包括一些测试inflate启动activity的规则。我们将会在我们的例子中使用这些规则。
+- `espresso-core`：`Espresso`的基本实现，它让`instrument tests`更加容易。
+- `espresso-contrib`：它增加了其它额外的功能，比如支持`RecyclerView`测试。我们不得不排除掉一些它的依赖，因为我们已经在这个项目中使用到了，否则测试会出错。
+
+我们现在来创建一个简单的例子。测试将会点击forecast列表的第一行，然后它会判断是否能找到一个id为`R.id.weatherDescription`的view。这个view是在`DetailActivity`中的，这表示我们在测试在RecyclerView里面点击后是否可以成功地导航到详情页面。
+
+```
+// kotlin
+class SimpleInstrumentationTest {
+
+    @get:Rule
+    val activityRule = ActivityTestRule(MainActivity::class.java)
+    
+    ...
+}
+```
+
+首先我们需要指定它运行时使用`AndroidJUnit4`。然后，创建一个activity规则，它会实例化一个测试需要的activity。在Java中，你可以使用`@Rule`。但是如你所知，字段和属性是不一样的，所以如果你像那样去使用的话，执行会失败因为访问属性中的字段是不是public的。你需要加注解的是在getter上面。Kotlin允许指定`get`或者`set`在Rule的名字前面。在这个例子中，只要些`@get:Rule`。
+
+之后，我们已经准备好创建第一个测试了：
+
+```
+// kotlin
+@Test fun itemClick_navigatesToDetail() {
+    onView(withId(R.id.forecastList)).perform(
+            RecyclerViewActions
+                .actionOnItemAtPosition<RecyclerView.ViewHolder>(0, click()))
+    onView(withId(R.id.weatherDescription))
+           .check(matches(isAssignableFrom(TextView::class.java)))
+}
+```
+
+函数加上了`@Test`注解，这根我们使用`unit test`的方式一样。我们可以开始在测试体中使用`Espresso`。它首先在`RecyclerView`的第一个position中执行了一个点击。然后它检测是否可以找到一个指定id的view且这个view是一个`TextView`。
+
+要运行这个测试，点击顶部的`Run configurations`下拉选择`Edit Configurations...`按下`+`图标，选择`Android Tests`，然后选择`app`模块。现在，在`target device`中选择你喜欢的`target`。点击`OK`然后运行。你应该可以看到App是怎样在你的设备中开始的，它会测试第一个position，打开详情页面然后再次关闭app。
+
+现在我们要做一个更加复杂一点的事情。测试会从toolbar众打开一个溢出菜单，点击`settings`栏，改变城市的`code`，然后检测toolbar的标题是否改变成了对应的标题。
+
+```
+// kotlin
+@Test fun modifyZipCode_changesToolbarTitle() {
+    openActionBarOverflowOrOptionsMenu(activityRule.activity)
+    onView(withText(R.string.settings)).perform(click())
+    onView(withId(R.id.cityCode)).perform(replaceText("28830"))
+    pressBack()
+    onView(isAssignableFrom(Toolbar::class.java))
+            .check(matches(
+                withToolbarTitle(`is`("San Fernando de Henares (ES)"))))
+}
+```
+
+这个测试实际做的事情：
+
+- 它首先使用`openActionBarOverflowOrOptionsMenu`打开溢出菜单。
+- 然后它根据`Settings`文本查找一个view，然后点击这个它。
+- 之后，设置界面就会被打开，所以它会查找一个`EditText`并且替换成一个新的`code`。
+- 它会点击返回按钮。它会把新的值保存在preferences中，然后关闭Activity。
+- 因为`MainActivity`的`onResume`会调用，请求会再调用一次。这时它会获取到新城市的forecast。
+- 最后一行将会检测Toolbar我们看到的title是否是新的城市的title。
+
+这不是一个toolbar的title的默认匹配器，但是`Espresso`是很容易扩展的，所以我们可以创建一个新的matcher来实现检测：
+
+```
+ // kotlin
+private fun withToolbarTitle(textMatcher: Matcher<CharSequence>): Matcher<Any> =
+        object : BoundedMatcher<Any, Toolbar>(Toolbar::class.java) {
+
+    override fun matchesSafely(toolbar: Toolbar): Boolean {
+        return textMatcher.matches(toolbar.title)
+    }
+
+    override fun describeTo(description: Description) {
+        description.appendText("with toolbar title: ")
+        textMatcher.describeTo(description)
+    }                
+}
+```
+
+`matchSafely`函数是我们检测的地方，而`describeTo`函数为matcher增加了一些新的信息。
+
+这章特别有趣，因为我们看到了在Kotlin中怎么样去完美和谐地整合测试，它们可以没有任何问题地整合测试。查看代码然后你自己运行一下吧。
+
+
+[Espresso]: https://google.github.io/android-testing-support-library/

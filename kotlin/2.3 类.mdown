@@ -1,0 +1,182 @@
+# 类
+
+Kotlin中的类遵循一个简单的结构。尽管与Java有一点细微的差别。你可以使用[try.kotlinlang.org]( http://try.kotlinlang.org/)在不需要一个真正的项目和不需要部署到机器的前提下来测试一些简单的代码范例。
+
+## 怎么定义一个类
+
+如果你想定义一个类，你只需要使用`class`关键字。
+```
+// kotlin
+class MainActivity{
+
+}
+```
+
+它有一个默认唯一的构造器。我们会在以后的课程中学习在特殊的情况下创建其它额外的构造器，但是请记住大部分情况下你只需要这个默认的构造器。你只需要在类名后面写上它的参数。如果这个类没有任何内容可以省略大括号：
+
+```
+// kotlin
+class Person(name: String, surname: String)
+```
+
+那么构造函数的函数体在哪呢？你可以写在`init`块中：
+```
+// kotlin
+class Person(name: String, surname: String) {
+    init{
+        ...
+    }
+}
+```
+
+### 构造器
+
+所有构造函数默认都是`public`的，它们类是可见的，可以被其它地方使用。我们也可以使用这个语法来把构造函数修改为`private`：
+
+```
+// kotlin
+class C private constructor(a: Int) { ... }
+```
+
+
+## 构造方法和函数参数
+
+Kotlin中的参数与Java中有些不同。如你所见，我们先写参数的名字再写它的类型：
+
+```
+// kotlin
+fun add(x: Int, y: Int) : Int {
+    return x + y
+}
+```
+
+我们可以给参数指定一个默认值使得它们变得可选，这是非常有帮助的。这里有一个例子，在Activity中创建了一个函数用来toast一段信息：
+
+```
+// kotlin
+fun toast(message: String, length: Int = Toast.LENGTH_SHORT) {
+    Toast.makeText(this, message, length).show()
+}
+```
+
+如你所见，第二个参数（length）指定了一个**默认值**。这意味着你调用的时候可以传入第二个值或者不传，这样可以避免你需要的重载函数：
+
+```
+// kotlin
+toast("Hello")
+toast("Hello", Toast.LENGTH_LONG)
+```
+
+这个与下面的Java代码是一样的：
+
+```
+// java
+void toast(String message){
+    toast(message,Toast.LENGTH_SHORT);
+}
+
+void toast(String message, int length){
+    Toast.makeText(this, message, length).show();
+}
+```
+
+这跟你想象的一样复杂。再看看这个例子：
+
+```
+// kotlin
+fun niceToast(message: String,
+                tag: String = javaClass<MainActivity>().getSimpleName(),
+                length: Int = Toast.LENGTH_SHORT) {
+    Toast.makeText(this, "[$className] $message", length).show()
+}
+```
+
+我增加了第三个默认值是类名的tag参数。如果在Java中总数开销会以几何增长。现在可以通过以下方式调用：
+
+```
+// kotlin
+toast("Hello")
+toast("Hello", "MyTag")
+toast("Hello", "MyTag", Toast.LENGTH_SHORT)
+```
+
+而且甚至还有其它选择，因为你可以使用参数名字来调用，这表示你可以通过在值前写明参数名来传入你希望的参数：
+
+```
+// kotlin
+toast(message = "Hello", length = Toast.LENGTH_SHORT)
+```
+
+###小提示：String模版
+
+你可以在String中直接使用模版表达式。它可以帮助你很简单地在静态值和变量的基础上编写复杂的String。在上面的例子中，我使用了"[$className] $message"。
+
+如你所见，任何时候你使用一个`$`符号就可以插入一个表达式。如果这个表达式有一点复杂，你就需要使用一对大括号括起来："Your name is ${user.name}"。
+
+
+## 内部类
+
+在Java中，我们可以在类的里面再定义类。如果它是一个通常的类，它不能去访问外部类的成员（就如Java中的static）：
+
+```
+// kotlin
+class Outer {
+  private val bar: Int = 1
+    class Nested {
+        fun foo() = 2
+    }
+}
+
+val demo = Outer.Nested().foo() // == 2
+```
+
+如果需要去访问外部类的成员，我们需要用`inner`声明这个类：
+
+```
+// kotlin
+class Outer {
+    private val bar: Int = 1
+    inner class Inner{
+        fun foo() = bar
+    }
+}
+
+val demo = Outer().Inner().foo() // == 1
+```
+
+## 类继承
+
+默认任何类都是基础继承自`Any`（与java中的`Object`类似），但是我们可以继承其它类。所有的类默认都是不可继承的（final），所以我们只能继承那些明确声明`open`或者`abstract`的类：
+
+```
+// kotlin
+open class Animal(name: String)
+class Person(name: String, surname: String) : Animal(name)
+```
+
+当我们只有单个构造器时，我们需要在从父类继承下来的构造器中指定需要的参数。这是用来替换Java中的`super`调用的。
+
+## 密封（Sealed）类
+
+密封类用来限制类的继承关系，这意味着密封类的子类数量是固定的。看起来就像是枚举那样，当你想在一个密封类的子类中寻找一个指定的类的时候，你可以事先知道所有的子类。不同之处在于枚举的实例是唯一的，而密封类可以有很多实例，它们可以有不同的状态。
+
+我们可以实现，比如类似Scala中的`Option`类：这种类型可以防止null的使用，当对象包含一个值时返回`Some`类，当对象为空时则返回`None`：
+
+```
+// kotlin
+sealed class Option<out T> {
+    class Some<out T> : Option<T>()
+    object None : Option<Nothing>()
+}
+```
+
+有一件关于密封类很不错的事情是当我们使用`when`表达式时，我们可以匹配所有选项而不使用`else`分支：
+
+```
+// kotlin
+val result = when (option) {
+    is Option.Some<*> -> "Contains a value"
+    is Option.None -> "Empty"
+}
+```
+
