@@ -1,0 +1,731 @@
+# 运算符重载及其他约定
+
+Java在标准库中有一些与特定的类相关联的语言特性，比如，实现Iterable接口的对象可以在for循环中使用。
+
+Kotlin也有许多特性的原理非常类似，通过调用自己代码中定义的函数，来实现特定语言结构。*在Kotlin中，这些功能与特定的函数命名相关，而不是与特定的类型绑定*。在Kotlin中，我们把这种技术称为*约定*。
+
+作为这章的例子，先实现一个简单的Point类，用来表示屏幕上的一个点：
+
+```
+data class Point(val x: Int, val y: Int)
+```
+
+## 重载算术运算符
+
+在Kotlin中使用约定的最直接的例子就是算术运算符。在Java中，全套的算术运算符只能用于基本数据类型，+运算符可以与String一起使用。在Kotlin中，可以让任意类使用算术运算符。
+
+### 重载二元算术运算
+
+```
+// 定义一个plus运算符
+data class Point(val x: Int, val y: Int) {
+    operator fun plus(other: Point): Point {
+        return Point(x + other.x, y + other.y)
+    }
+}
+
+val point1 = Point(10,20)
+val point2 = Point(20,20)
+println(p1 + p2) ----------> Point(x = 30, y = 40)
+```
+
+使用*operator关键字*来声明plus函数。用于重载运算符的所有函数都需要用该关键字标记，用来表示打算把这个函数作为相应的约定的实现，并且不是碰巧地定义一个同名函数。
+
+上面的类可以直接使用+号来求和，它调用的是plus函数：
+
+```
+a + b ----------> a.plus(b) // +号运算符会转换成plus函数的调用
+```
+
+除了把这个运算符声明为一个成员函数外，也可以把它定义为一个扩展函数：
+
+```
+operator fun Point.plus(other: Point): Point {
+    return Point(x + other.x, y + other.y)
+}
+```
+
+在Kotlin中不管是定义函数使用重载运算符都更为简单，因为不能定义自己的运算符。Kotlin限定了能重载哪些运算符，以及你需要在你的类中定义的对应名字的函数：
+
+|表达式|函数名|
+|-----|-----|
+|a * b|times|
+|a / b|div|
+|a % b|mod|
+|a + b|plus|
+|a - b|minus|
+
+自定义类型的运算符，基本上和标准数字类型的运算符有着相同的优先级。运算符\*，/和%具有相同的优先级，高于+和-运算符的优先级。
+
+当在定义一个运算符的时候，*不要求两个运算数是相同的类型*：
+
+```
+// 定义一个运算数类型不同的运算符
+operator fun Point.times(scale: Double): Point {
+    return Point(x * scale.toInt(), y * scale.toInt())
+}
+
+val point = Point(10,20)
+println(point * 2)----------> Point(x = 20, y = 40)
+```
+
+Kotlin运算符*不会自动支持交换性（交换运算符的左右两边）*。
+
+运算符函数的返回类型也可以不同于任一运算数类型：
+
+```
+operator fun Char.times(count: Int): String {
+    return toString.repeat(count)
+}
+
+val char = 'a'
+println(char * 3) ------------>aaa
+```
+
+和普通的函数一样，可以重载operator函数：可以定义多个同名的，但参数类型不同的方法。
+
+#### 没有用于位运算的特殊运算符
+
+Kotlin没有为标准数字类型定义任何位运算符，因此，也不允许你为自定义类型定义它们。
+
+Kotlin使用支持中缀调用语法的常规函数，可以为自定义类型定义相似的函数：
+
+|函数名|操作|
+|-----|----|
+|shl|带符号左移|
+|shr|带符号右移|
+|ushr|无符号右移|
+|and|按位与|
+|or|按位或|
+|xor|按位异或|
+|inv|按位取反|
+
+println(0x0F and 0xF0) --------> 0
+println(0x0f or 0xF0) -------->255
+println(0x1 shl 4) --------->16
+
+### 重载复合赋值运算符
+
+当在定义像plus这样的运算符函数时，Kotlin不止支持+号运算，也支持+=。像+=，-=等这些运算符被称为*复合赋值运算符*。
+
+在一些情况下，定义+=运算可以修改使用它的变量所引用的对象，但不会重新分配引用：
+
+```
+// 将一个元素添加到可变集合
+val numbers = ArrayList<Int>()
+numbers += 42
+println(numbers[0])----------> 42
+```
+
+若定义了一个返回值为Unit，名为*plusAssign*的函数，Kotlin将会在用到+=运算符的地方调用它。其他二元运算符也有命名相似的对应函数：minusAssign，timesAssign等。
+
+当在代码中用到+=的时候，理论上plus和plusAssign都可能被调用。在这种情况下啊，两个函数都有定义且适用，编译器会报错。一种解决办法是：*替换运算符的使用为普通函数调用*。另一种方法是：用val替换var，这样plusAssign运算就不再适用。
+
+最好一致地设计出新的类：尽量不要同时给一个类添加plus和plusAssign运算。
+
+Kotlin标准库支持集合的这两种方法：+和-运算符总是返回一个新的集合。+=和-=运算符用于可变集合，始终在一个地方修改它们；而它们用于只读集合时，会返回一个修改过的副本（这意味着只有当引用只读集合的变量被声明为var的时候，才能使用+=和-=）。
+
+### 重载一元运算符
+
+用预先定义的一个名称来声明函数（成员函数或扩展函数），并用修饰符operator标记。
+
+```
+// 定义一个一元运算符
+operator fun Point.unaryMinus(): Point {
+    return Point(-x, -y)
+}
+val point = Point(10,20)
+println(-p) ------------>Point(x = -10, y = -20)
+```
+
+用于重载一元运算符的函数，没有任何参数。
+
+|表达式|函数名|
+|-----|-----|
+|+a|unaryPlus|
+|-a|unaryMinus|
+|!a|not|
+|++a，a++|inc|
+|--a，a--|dec|
+
+当定义inc和dec函数来重载自增和自减的运算符时，编译器会自动支持与普通数字类型的前缀和后缀自增运算符相同的语义。
+
+```
+// 定义一个自增运算符
+operator fun BigDecimal.inc() = this + BigDecimal.ONE
+
+var bd = BigDecimal.ZERO
+println(bd++) ----------->0 // 在println语句执行后增加
+println(++bd) ----------->2 // 在println语句执行前增加
+```
+
+## 重载比较运算符
+
+与算术运算符一样，在Kotlin中，可以对任何对象使用比较运算符（==，!=，>，<等），而不仅仅限于基本数据类型。
+
+### 等号运算符：“equals”
+
+在Kotlin中使用==运算符，它将被转换成equals方法的调用。使用!=运算符也会被转换成equals函数的调用，明显的差异在于：它们的结果是相反的。
+
+```
+// 实现equals函数
+class Point(val x: Int, val y: Int) {
+    override fun equals(obj: Any?): Boolean {
+        if(obj === this) return true
+        if(obj !is Point) return false
+        return obj.x == x && obj.y == y
+    }
+}
+```
+
+*恒等运算符（===）来检查参数与调用equals的对象是否相同*。恒等运算符与Java中的==运算符是完全相同的：检查两个参数是否是同一个对象的引用（若是基本数据类型，检查它们是否是相同的值）。
+
+*注意：===运算符不能被重载。*
+
+equals函数之所以被标记为override，是因为与其他约定不同的是，这个方法的实现是在Any类中定义的。这也解释了为什么不需要将它标记为operator：Any中的基本方法已经标记了，而且函数的operator修饰符也适用于所有实现或重写它的方法。
+
+*注意：equals不能实现为扩展函数，因为继承自Any类的实现始终优先于扩展函数。*
+
+### 排序运算符：“compareTo”
+
+Kotlin支持相同的Comparable接口。但是接口中定义的compareTo方法可以按照约定调用，比较运算符（<，>，<=和>=）的使用将被转换为compareTo。
+
+```
+// 实现compareTo方法
+class Person (val firstName: String, val lastName: String) : Comparable<Person> {
+    override fun compareTo(other: Person): Int {
+        return compareValuesBy(this,other,Person::lastName,Person::firstName)
+    }
+}
+```
+
+与equals一样，operator修饰符已经被用在了基类的接口中，因此在重写该接口时无需重复。
+
+所有Java中实现了Comparable接口的类，都可以在Kotlin中使用简洁的运算符语法，不用再增加扩展函数：
+
+```
+println("abc" < "bac") ----------> true
+```
+
+## 集合与区间的约定
+
+处理集合最常见的一些操作是通过下标来标取和设值元素，以及检查元素是否属于当前集合。所有的这些操作都支持运算符语法：要通过下标获取或设置元素，可以使用语法a\[b\]（称为*下标运算符*）。可以使用*in运算符*来检查元素是否在集合或区间内，也可以迭代集合。
+
+### 通过下标来访问元素：“get”和“set”
+
+在Kotlin中，可以用类似Java中数组的方式来访问map中的元素——使用方括号：
+
+```
+val value = map[key]
+```
+
+也可以用同样的运算符来改变一个可变map的元素：
+
+```
+mutableMap[key] = newValue
+```
+
+在Kotlin中，下标运算符是一个约定。使用下标运算符读取元素会被转换成*get运算符*方法的调用，写入元素将调用*set*：
+
+```
+// 实现get约定
+operator fun Point.get(index: Ine): Int {
+    return when(index) {
+        0 -> x
+        1 -> y
+        else -> throw IndexOutOfBoundsException("Invalid coordinate $index")
+    }
+}
+
+val p = Point(10,20)
+println(p[0]) --------> 10
+println(p[1]) --------> 20
+```
+
+只需要定义一个名为get的函数，并标记operator。
+
+get的参数可以是任何类型，而不只是Int。例如，当对map使用下标运算符时，参数类型是键的类型，它可以是任意类型。还可以定义具有多个参数的get方法。
+
+```
+// 实现set的约定方法
+data class MutablePoint(var x: Int, var y: Int)
+
+operator fun MutablePoint.set(index: Int, value: Int) {
+    when(index) {
+        0 -> x = value;
+        1 -> y = value;
+        else -> throw IndexOutOfBoundsException("Invalid coordinate $index")
+    }
+}
+
+val p = MutablePoint(10,20)
+p[1] = 10
+println(p) ---------> Mutable(x=10,y=10)
+```
+
+只需要定义一个名为set的函数，可以在赋值语句中使用下标运算符。
+
+### “in”的约定
+
+集合支持的另一个运算符是*in运算符*，用于检查某个对象是否属于集合。相应的函数是*contains*
+
+```
+// 实现in的约定
+data class Rectangle(val upperLeft: Point, val lowerRight: Point)
+
+operator fun Rectangle.contains(p: Point): Boolean {
+    return p.x in upperLeft.x until lowerRight.x
+           && p.y in upperLeft.y until lowerRight.y
+}
+val rect = Rectable(Point(10,20),Point(50,50))
+println(Point(20,30) in rect) ------->true
+println(Point(5,5) in rect) --------> false
+```
+
+in右边的对象将会调用contains函数，in左边的对象将会作为函数入参。
+
+矩形类通常定义成这样，它的底部和右侧坐标不是矩形的一部分，因此在这里使用开区间是合适。
+
+### “rangeTo”的约定
+
+*..运算符*是调用rangeTo函数的一个简洁方法。rangeTo函数返回一个区间。你可以为自己的类定义这个运算符。但若该类实现了Comparable接口，就不需要了。
+
+这个函数返回一个区间，可以用来检测其他一些元素是否属于它。
+
+```
+// 处理日期区间
+val now = LocalData.now()
+val vacation = now .. now.plusDays(10)
+println(now.plusWeeks(1) in vacation) ----------->true
+```
+
+now .. now.plusDays(10)表达式将会被编译器转换为now.rangeTo(now.plusDays(10))。rangeTo函数并不是LocalDate的成员函数，而是Comparable的一个扩展函数：
+
+```
+operator fun <T: Comparable<T>> T.rangeTo(that: T): ClosedRange<T>
+```
+
+rangeTo运算符的优先级低于算术运算符，但是最好把参数括起来以免混淆：
+
+```
+val n = 9
+println(0 .. (n + 1)) -------> 0 .. 10
+```
+
+*注意：表达式0..n.forEach()不会被编译，因为必须把区间表达式括起来才能调用它的方法*：
+
+```
+(0..n).forEach {println(it)}
+```
+
+### 在“for”循环中使用“iterator”的约定
+
+在Kotlin中，for循环中也可以使用in运算符，和做区间检查一样，但是在这种情况下它的含义是不同的：它被用来执行迭代。
+
+在Kotlin中，这也是一种约定，这意味着*iterator方法可以被定义为扩展函数*。
+
+```
+// 标准库已经为CharSequence定义了一个扩展函数iterator
+operator CharSequence.iterator(): CharIterator {...}
+```
+
+可以为自己的类定义iterator方法：
+
+```
+operator fun ClosedRange<LocalDate>.iterator(): Iterator<LocalDate> = 
+        object : Iterator<LocalDate> {
+            var current = start
+
+            override fun hasNext() = 
+                current <= endInclusive
+
+            override fun next() = current.apply {
+                current = plusDays(1)
+            }
+        }
+
+val newYear = LocalDate.ofYearDay(2017.1)
+val daysOff = newYear.minusDays(1) .. newYear
+for(dayOff in daysOff) {println(dayOff)} 
+```
+
+使用LocalDate作为类型参数，rangeTo库函数返回一个ClosedRange的实例，并且ClosedRange<LocalDate>的iterator扩展允许在for循环中使用区间的实例。
+
+## 解构声明和组件函数
+
+解构声明：允许你展开单个复合值，并使用它来初始化多个单独的变量。
+
+```
+val point = Point(10,20)
+val (x,y) = point
+println(x) ----------->10
+println(y) -----------> 20
+```
+
+一个解构声明看起来像一个普通的变量声明，但它在括号中有多个变量。
+
+解构声明再次用到了约定的原理。要在解构声明中初始化每个变量，将调用名为componentN的函数：
+
+```
+class Point(val x: Int, val y: Int) {
+    operator fun component1() = x
+    operator fun component2() = y
+}
+```
+
+解构声明主要使用场景之一，是从一个函数返回多个值，这非常有用。可以定义一个数据类来保存返回所需的值，并将它作为函数的返回类型。
+
+```
+// 使用解构声明来返回多个值
+data class NameComponents(val name: String, val extension: String)
+
+fun splitFileName(fullName: String) : NameComponents {
+    val result = fullName.split('.',limit = 2)
+    return NameComponents(result[0],result[1])
+}
+
+val (name,extension) = splitFileName("example.kt")
+println(name) -------> example
+println(extension) -----> kt
+```
+
+componentN函数在数组和集合上也有定义，在处理已知大小的集合时，解构声明非常有用：
+
+```
+// 使用解构声明处理集合
+data class NameComponents(val name: String, val extension: String)
+
+fun splitFileName(fullName: String) : NameComponents {
+    val (name,extension) = fullName.split(".",limit = 2)
+    return NameComponents(name,extension)
+}
+```
+
+不可能定义无限数量的componentN函数。*标准库只允许使用此语法来访问一个对象的前五个元素*。
+
+### 解构声明和循环
+
+解构声明不仅可以用作函数中的顶层语句，还可以用在其他可以声明变量的地方，例如in循环。
+
+```
+// 用解构声明遍历map
+fun printEntries(map: Map<String,String>) {
+    for((key,value) in map) {
+        println("$key -> $value")
+    }
+}
+```
+
+这个例子用到了两个Kotlin约定：一个是迭代一个对象，另一个是用于解构声明。Kotlin标准库给map增加了一个扩展的iterator函数，用来返回map条目的迭代器。因此，可以直接迭代map。
+
+## 重用属性访问的逻辑：委托属性
+
+Kotlin中最独特和最强大的功能之一：*委托属性*。它们处理起来比把值存储在支持字段中更复杂，却不用在每个访问器中都重复这样的逻辑。
+
+这个功能的基础是*委托*，操作的对象不用自己执行，而是把工作委托给另一个辅助的对象。我们把辅助对象称为*委托*。
+
+### 委托属性的基本操作
+
+委托属性的基本语法：
+
+```
+class Foo {
+    var p: Type by Delegate()
+}
+```
+
+通过关键字*by*对其后的表达式求值来获取这个对象，关键字by可以用于任何符合属性委托约定规则的对象。
+
+编译器会创建一个隐藏的辅助属性，并使用委托对象的实例进行初始化，初始属性p会委托给该实例：
+
+```
+class Foo {
+    pritave val delegate = Delegate()
+    var p: Type
+        set(value: Type) = delegate.setValue(...,value)
+        get() = delegate.getValue(...)
+}
+```
+
+按照约定，Delegate类必须具有getValue和setValue方法（后者仅适用于可变变量）。像往常一样，它们可以是成员函数，也可以是扩展函数。
+
+Delegate类的简单实现差不多是这样的：
+
+```
+class Delegate {
+    operator fun getValue(...) {...}
+    operator fun setValue(...,value: Type) {...}
+}
+class Foo {
+    var p: Type by Delegate()
+}
+```
+
+可以把foo.p作为普通的属性使用，事实上，它将调用Delegate类型的辅助属性的方法。
+
+### 使用委托属性：惰性初始化和“by lazy（）”
+
+*惰性初始化*是一种常见的模式，直到在第一次访问该属性的时候，才根据需要创建对象的一部分。
+
+举例子：一个Person类，可以用来访问一个人写的邮件列表。邮件存储在数据库中，访问比较耗时，希望在只有首次访问时才加载邮件，并执行一次。
+
+```
+// 使用支持属性来实现惰性初始化
+class Person(val name: String) {
+    private var _emails: List<Email?> = null
+
+    val email: List<Email>
+        get() {
+            if(_emails == null) {
+                _emails = loadEmails(this) // 从数据库中检索电子邮件
+            }
+            return _emails!!
+        }  
+}
+```
+
+这里使用了*支持属性技术*。有一个属性：_emails，用来存储这个值，而另一个emails，用来提供对属性的读取访问。需要使用两个属性，因为属性具有不同的类型：\_emails可以为空，而email为非空。
+
+但是这个代码有点啰嗦：要是有几个惰性属性那得有多长。而且，它并不总是正常运行：这个实现不是线程安全的。（类似Java中单例模式）
+
+Kotlin提供了更好的解决方案：使用委托属性会让代码变得简单得多，可以封装用于存储值的支持属性和确保该值只被初始化一次的逻辑。
+
+```
+// 使用委托属性来实现惰性初始化
+class Person(val name: String) {
+    val emails by lazy {loadEmails(this)}
+}
+```
+
+lazy函数返回一个对象，该对象具有一个名为getValue且签名正确的方法，因此可以把它与by关键字一起使用来创建一个委托属性。
+
+默认情况下，lazy函数式线程安全的，若需要，可以设置其他选项来告诉它要使用哪个锁，或者完全避开同步，若该类永远不会在多线程环境中使用。
+
+### 实现委托属性
+
+例子：当对象显示在UI时，希望在对象变化时UI能自动刷新。Java具有用于此类通知的标准机制：PropertyChangeSupport和PropertyChangeEvent类。
+
+PropertyChangeSupport类维护了一个监听器列表，并向它们发送PropertyChangeEvent事件。要使用它，通常需要把这个类的一个实例存储为bean类的一个字段，并将属性更改的处理委托给它。
+
+```
+// 使用PropertyChangeSupport的工具类
+open class PropertyChangeAware {
+    protected val changeSupport = PropertyChangeSuppoert(this)
+
+    fun addPropertyChangeListener(listener: PropertyChangeListener) {
+        changeSupport.addPropertyChangeListener(listener)
+    }
+
+    fun removePropertyChangeListener(listener: ProperthChangeListener) {
+        changeSupport.removePropertyChangeListener(listener)
+    }
+}
+
+// 手工实现属性修改的通知
+class Person(val name: String, age: Int, salary: Int) : PropertyChangeAware() {
+    var age: Int = age
+        set(newValue) {
+            val oldValue = field
+            field = newValue
+            changeSupport.fireProperthChange("age",oldValue,newValue)
+        }
+
+    var salary: Int = salary
+        set(newValue) {
+            val oldValue = field
+            field = newValue
+            changeSupport.firePropertyChange("salsry",oldValue,newValue)
+        }
+}
+```
+
+setter中有很多重复的代码，尝试提取一个类，用来存储这个属性的值并发起通知：
+
+```
+class ObservableProperty (val propName: String, val propValue: Int, 
+                          val changeSupport: PropertyChangeSupport) {
+    fun getValue(): Int = propValue
+    fun setValue(newValue: Int) {
+        val oldValue = propValue
+        propValue = newValue
+        changeSupport.firePropertyChange(propName, oldValue, newValue)
+    }
+}
+
+class Person(val name: String, age: Int, salary: Int) : PropertyChangeAware() {
+    val _age = ObservableProperty("age", age, changeSupport)
+    var age: Int
+        get() = _age.getValue()
+        set(value) {_age.setValue(value)}
+
+    val _salary = ObservableProperty("salary", salary, changeSupport)
+    var salary: Int
+        get() = _salary.getValue()
+        set(value) {_salary.setValue(value)}
+}
+```
+
+这就是委托属性的工作原理：*创建了一个保存属性值的类，并在修改属性时自动触发更改通知*。
+
+```
+// ObserableProperty作为属性委托
+class ObservableProperty(var propValue: Int, val changeSupport: PropertyChangeSupport) {
+    operator fun getValue(p: Person, prop: KProperty<*>): Int = propValue
+    operator fun setValue(p: Person, prop: KProperty<*>, newValue: Int) {
+        val oldValue = propValue
+        propValue = newValue
+        changeSupport.firePropertyChange(prop.name, oldValue, newValue)
+    }
+}
+```
+
+代码做了一些更改：
+* 按照约定的需要，函数被标记了operator。
+* 函数加了两个属性：一个用于接收属性的实例，用来设置或读取属性。另一个用于表示属性本身，这个属性类型为KProperty。可以用KProperty.name的方式来访问该属性的名称
+* 把name属性从主构造方法中删除了，因为现在已经可以通过KProperty访问属性名称。
+
+```
+// 使用委托属性来绑定更改通知
+class Person (val name: String, age: Int, salary: Int) : PropertyChangeAware() {
+    var age: Int by ObservableProperty(age, changeSupport)
+    var salary: Int by ObservableProperty(salary, changeSupport)
+}
+```
+
+通过关键字by，Kotlin编译器会自动执行之前版本的代码中手动完成的操作。使用委托属性时生成的代码与手写版本非常类似，右边的对象被称为委托。
+
+你不用手动去实现可观察的属性逻辑，可以使用Kotlin标准库，它已经包含了类似ObservableProperty的类。
+
+```
+// 使用Delegate.observable来实现属性修改的通知
+class Person(val name: String, age: Int, salary: Int) : PropertyChangeAware() {
+
+    private val observer = {prop: KProperty<*>, oldValue: Int, newValue: Int
+                            -> changeSupport.firePropertyChange(prop.name,oldValue,newValue)}
+
+    var age: Int by Delegates.observable(age, observer)
+    var salary: Int by Delegates.observable(salary, observer)
+}
+```
+
+by右边的表达式不一定是新创建的实例，也可以是函数调用，另一个属性或任何其他表达式，只要这个表达式的值，是能够被编译器用正确的参数来调用getValue和setValue的对象。
+
+委托属性机制是通用的，适用于任何其他类型。
+
+### 委托属性的变换规则
+
+```
+class C {
+    var prop: Type by MyDelegate()
+}
+```
+
+MyDelegate实例会被保存到一个隐藏的属性中，它被称为<delegate\>。编译器也会用一个KProperty类型的对象来代表这个属性，它被称为<property\>。
+
+编译器生成的代码：
+
+```
+class C {
+    private val <delegate> = MyDelegate()
+
+    var prop: Type
+        get() = <delegate>.getValue(this, <property>)
+        set(value: Type) = <delegate>.setValue(this, <property>, value)
+}
+```
+
+因此，每个属性访问器中，编译器都会生成对应的getValue和setValue方法。
+
+这个机制非常简单，但它可以实现许多有趣的场景。你可以自定义存储该属性值的位置（map，数据库表或者用户会话的Cookies中），以及在访问该属性时做点什么（比如添加验证，更改通知等）。所有这一切都可以用紧凑的代码完成
+
+### 在map中保存属性值
+
+委托属性发挥作用的另一种常见用法，是用在*有动态定义的属性集的对象中*。这样的对象有时被称为*自订（expando）对象*。
+
+例如：一个联系人管理系统，可以用来存储有关联系人的任意信息。系统中的每个人都有一些属性需要特殊处理（如名字，地址等），以及每个人特有的数量任意的额外属性（如孩子的生日）
+
+实现这种系统的一种方法是将人的所有属性存储在map中，不确定提供属性，来访问需要特殊处理的信息：
+
+```
+// 定义一个属性，把值存在map
+class Person {
+    private val _attributes = hashMapOf<String, String>()
+
+    fun setAttribute(attrName: String, value: String) {
+        _attributes[attrName] = value
+    }
+
+    val name: String
+        get() = _attributes["name"]
+}
+
+val person = Person()
+val data = mapOf("name" to "Dmitry", "company" to "JetBrains")
+for((attrName,value) in data) {
+    person.setAttribute(attrName,value)
+}
+println(person.name) -------> Dmitry
+```
+
+使用一个通用的API来把数据加载到对象中，然后使用特定的API来访问一个属性的值。
+
+把它改为委托属性非常简单，可以直接将map放在by关键字后面：
+
+```
+class Person {
+    private val _attributes = hashMapOf<String,String>()
+
+    fun setAttribute(attrName: String, value: String) {
+        _attributes[attrName] = value
+    }
+
+    val name: String by _attributes
+}
+```
+
+因为标准库已经在标准Map和MutableMap接口上定义了getValue和setValue扩展函数。
+
+### 框架中的委托属性
+
+更改存储和修改属性的方式对框架的开发人员非常有用。
+
+例如：数据库中有Users的表包含两列数据：字符串类型的name和整型的age。可以在Kotlin中定义Users类和User类，所有存储在数据库中的用户实体的加载和更改都可以通过User类的实例来操作：
+
+```
+// 使用委托属性来访问数据库列
+oject Users : IdTable() {
+    val name = varchar("name", length = 50).index()
+    val age = integer("age")
+}
+
+class User(id: EntityId) : Entity(id) {
+    var name: String by Users.name
+    var age: Int by Users.age
+}
+```
+
+Users对象描述一个数据库的一个表：它被声明为一个对象，因为它对应整个表，所以只需要一个实例。对象的属性表示数据表的列。
+
+User类的基类Entity，包含了实体的数据库列与值的映射，特定User的属性拥有这个用户在数据库中指定的值name和age。
+
+框架用起来会特别方便，因为访问属性会自动从Entity类的映射中检索相应的值，而修改过的对象会被标记成脏数据，在需要时可将其保存到数据库中。
+
+## 总结
+
+* Kotlin允许使用对应名称的函数来重载一些标准的数学运算，但是不能定义自己的运算符。
+
+* 比较运算符映射为equals和compareTo方法的调用。
+
+* 通过定义名为get，set和contains的函数，就可以让你自己的类与Kotlin的集合一样，使用[ ]和in运算符。
+
+* 可以通过约定来创建区间，以及迭代集合和数组。
+
+* 解构声明可以展开单个对象用来初始化多个变量，这可以方便地用来从函数返回多个值。它们可以自动处理数据类，可以通过给自己的类定义名为componentN的函数来支持。
+
+* 委托属性可以用来重用逻辑，这些逻辑控制如何存储，初始化，访问和修改属性值。这是用来构建框架的一种强大的工具。
+
+* lazy标准库函数提供了一种实现惰性初始化属性的简单方法。
+
+* Delegates.observable函数可以用来添加属性更改的观察者。
+
+* 委托属性可以使用任意map来作为属性委托，来灵活处理具有可变属性集的对象。

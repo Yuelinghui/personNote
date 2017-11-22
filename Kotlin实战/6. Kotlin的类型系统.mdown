@@ -1,0 +1,694 @@
+# Kotlin的类型系统
+
+与Java相比，Kotlin引入了一些新特性，它们是提升代码可读性的基本要素。比如：对*可空的类型和只读集合的支持*。同时，Kotlin去掉了一些Java类型系统中不必要的或者有问题的特性，比如把数组作为头等公民来支持。
+
+## 可空性
+
+*可空性是Kotlin类型系统中帮助我们避免NullPointerException错误的特性*。
+
+现代编程语言包括Kotlin解决这类错误的方法就是把运行时的错误转变为编译期的错误，通过支持作为类型系统的一部分的可空性，编译器就能在编译期发现很多潜在的错误，从而减少运行时抛出异常的可能性。
+
+### 可空类型
+
+Kotlin和Java的类型系统之间最重要的一条区别是：*Kotlin对可空类型的显式的支持*。
+
+若一个变量可以为null，对变量的方法的调用就是不安全的，因为这样会导致NullPointerException。*Kotlin不允许这样的调用，因而可以阻止许多可能的异常*
+
+```
+// Java
+int strLen(String s) {
+    return s.length();
+}
+```
+
+这个函数被调用的时候，传给它的是一个null实参，就会抛出空指针异常。那是否需要在方法中增加对null的检查呢？这取决于使用该函数的意图。
+
+用Kotlin重写这个函数：
+
+```
+fun strLen(s: String) = s.length
+```
+
+使用可能为null的实参调用strLen是不允许的，在编译期就会被标记成错误：
+
+```
+strLen(null) ----> ERROR:Null can not be a value of a non-null type String
+```
+
+函数中的参数被声明成String类型，在Kotlin中这表示它必须包含一个String实例。这由编译器强制实施，所以不能传给它一个包含null的实参。
+
+若允许调用这个方法的时候传给它所有可能的实参，包括可以为null的实参，需要显式地*在类型名称后面加上问号来标记它*：
+
+```
+fun strLen(s: String?) = ...
+```
+
+*问号可以加在任何类型的后面来表示这个类型的变量可以存储null引用。*
+
+没有问号的类型表示*这种类型的变量不能存储null引用*。所有常见类型默认都是非空的，除非显式地把它标记为可空。
+
+一旦有一个可空类型的值，能对它进行的操作也会受到限制：
+
+```
+fun strLen(s: String?) = s.length
+
+---> ERROR:only safe (?.) or non-null asserted (!!.) calls are allowed on a 
+           nullable receiver of type kotlin.String?
+```
+
+也不能把它赋值给非空类型的变量：
+
+```
+val x: String? = null
+var y: String = x
+
+ERROR:Type mismatch:inferred type is String? but String was expected
+```
+
+也不能把可空类型的值传给拥有非空类型参数的函数：
+
+```
+strLen(x)
+
+ERROR;Type mismatch:inferred type is String? but String was expected
+```
+
+我们可以对它做什么呢？最重要的操作就是和null进行比较。而且一旦你进行了比较操作，编译器就会记住，并且在这次比较发生的作用域内把这个值当作非空来对待。
+
+```
+// 使用if检查null
+fun strLen(s: String?): Int = if(s == null) 0 else s.length
+```
+
+若if检查只是唯一处理可空性的工具，那代码很快会变得冗长。Kotlin还提供了其他一些工具来帮助我们用更简洁的方式来处理可空值。
+
+### 类型的含义
+
+类型就是数据的分类，决定了该类型可能的值，以及该类型的值上可以完成的操作。
+
+在Java中，String类型的变量可以持有两种值，String的实例和null。这两种值完全不一样：Java自己的instanceof运算符都会告诉你null不是String。这两种值的操作也完全不一样：真是的String实例可以调用它的任何方法，而null值只允许非常有限的操作。
+
+这说明Java的类型系统在这种情况下不能很好的工作。即使变量拥有声明的类型String你依然无法知道能对变量的值做些什么，除非做额外的检查。
+
+Kotlin的可空类型为这类问题提供了全面的解决方案。区分开可空类型和非空类型使事件变得明朗：哪些对值的操作是允许的，哪些操作有会导致运行时异常并因此被禁止。
+
+*注意：可空的和非空的对象在运行时没有区别，可空类型并不是非空类型的包装。所有的检查都发生在编译期。这意味着使用Kotlin的可空类型并不会在运行时带来额外的开销。*
+
+### 安全调用运算符：“?.”
+
+若试图调用一个非空值的方法，这次方法调用会被正常地执行。但若值是null，这次调用不会发生，而整个表达式的值为null：
+
+```
+s?.toUpperCase()等价于if(s!=null) s.toUpperCase() else null
+```
+
+*安全调用运算符只会调用非空值的方法*
+
+*注意：这次调用的结果类型也是可空的。尽管String.toUpperCase()会返回String类型的值，但是s是可空的时候，s?.toUpperCase()的结果类型是String?*
+
+安全调用不光可以调用方法，也能用来访问属性：
+
+```
+class Employee(val name: String, val manager: Employee?)
+
+fun managerName(employee: Employee): String? = employee.manager?.name
+```
+
+使用?.运算符，不需要任何额外的检查，就可以在一行代码中访问到Person的country属性：
+
+```
+class Address(val streetAddress: String, val zipCode: Int
+        , val city: String, val country: String)
+
+class Company(val name: String, val address: Address?)
+
+class Person(val name: String, val company: Company?)
+
+fun Person.countryName(): String {
+    val country = this.company?.address?.country
+    return if(country != null) country else "Unknown"
+}
+```
+
+带null检查的方法调用序列在Java中很常见，Kotlin中可以让它们变得更简洁。
+
+### Elvis运算符：“?:”
+
+Kotlin有方便的运算符来提供代替null的默认值。*它被称为Elvis运算符（或者null合并运算符）*。
+
+```
+fun foo(s: String?) {
+    val t: String = s ?: ""
+}
+```
+
+Elvis运算符接收两个运算数，若第一个运算数不为null，运算结果就是第一个运算符；若第一个运算数为null，运算结果就是第二个运算数。
+
+Elvis运算符经常和安全调用运算符一起使用，用一个值代替对null对象调用方法时返回的null。
+
+```
+fun strLen(s: String?): Int = s?.length ?: 0
+```
+
+在Kotlin中有一种场景Elvis运算符会特别顺手，像return和throw这样的操作其实是表达式，可以把它们写在Elvis运算符的右边。
+
+```
+fun printLabel(person: Person) {
+    val address = person.company?.address
+     ?: throw IllegalArgumentException("No address")
+
+     with(address) {
+        println(streetAddress)
+     }
+}
+```
+
+若一切正常，函数会打印标签。若地址不存在，它不会只是抛出一个带行号的NPE，相反，它会报告一个有意义的错误。
+
+### 安全转换：“as?”
+
+用来转换类型的常规Kotlin运算符：as运算符。和常规的Java类型一样，若被转换的值不是试图转换的类型，就会抛出ClassCastException异常。当然可以结合is检查类确保这个值拥有合适的类型。但是Kotlin有更优雅的解决方法：*as?运算符尝试把值转换成指定的类型，若值不是合适的类型就返回null*。
+
+```
+class Person(val firstName: String, val lastName: String) {
+    override fun equals(o: Any?): Boolean {
+        val otherPerson = o as? Person ?: return false
+        return otherPerson.firstName == firstName
+            && otherPerson.lastName == lastName
+    }
+
+    override fun hashCode(): Int = ...
+}
+```
+
+使用这种模式，可以非常容易地检查实参是否是适当的类型，转换它，并在它的类型不正确时返回false，而且这些操作全部在同一个表达式中。智能转换也会生效：*当你检查过类型并拒绝了null值，编译器就确定了变量otherPerson值的类型是Person并能够相应地使用它*。
+
+### 非空断言：“!!”
+
+非空断言是Kotlin提供的最简单直率的处理可空类型的工具。它可以把任何值转换成非空类型。*若对null值做非空断言，则会抛出异常*。
+
+```
+fun ignoreNulls(s: String?) {
+    val sNotNull: String = s!!
+    println(sNotnull.length)
+}
+
+ignoreNulls(null)
+
+----> Exception in thread "main" kotlin.KotlinNullPointerException at <...>.ignoreNulls(...)
+```
+
+若上面函数中s为null，Kotlin会在运行时抛出一个异常，但是注意：抛出异常的位置是非空断言所在的那一行，而不是接下来试图使用那个值的一行。
+
+某些问题适合用非空断言来解决：在一个函数中检查一个值是否为null，而在另一个函数中使用这个值时。这种情况下编译器无法识别这种用法是否安全。若你确信这样的检查一定在其他某个函数中存在，可能不想在使用这个值之前重复检查，就可以使用非空断言。
+
+当你使用!!并且它的结果是异常时，异常调用栈的跟踪信息只表明异常发生在哪一行代码，而不会表明异常发生在哪一个表达式。为了让跟踪信息更清晰精确地表示哪个值为null，更好避免在同一行中使用多个!!断言：
+
+```
+person.company!!.address!!.country // 不要写这种代码
+```
+
+### "let"函数
+
+let函数让处理可空表达式变得更容易。和安全调用运算符一起，它允许你对表达式求值，检查求值结果是否为null，并把结果保存为一个变量。所有这些动作都在同一个简洁的表达式。
+
+```
+fun sendEmailTo(email: String) {...}
+```
+
+不能把可空类型的值传给这个函数：
+
+```
+val email: String? = ...
+sendEmailTo(email)
+
+ERROR:Type mismatch: inferred type is String? but String was expected
+```
+
+必须显式地检查这个值不为null：
+
+```
+if(email != null) sendEmailTo(email)
+```
+
+还有另外一种处理方式：使用let函数，并通过安全调用来调用它。let函数做的所有事情就是把一个调用它的对象变成Lambda表达式的参数。
+
+```
+email?.let { email -> sendEmailTo(email) }
+```
+
+let函数只在email的值非空时才会被调用，所以能在Lambda中把email当作非空的实参使用。使用自动生成的名字it这种简明语法之后，上面的代码可以更短：
+
+```
+email?.let {sendEmailTo(it)}
+```
+
+若有一些很长的表达式结果不为null，而你又要使用这些结果时，let表示法更方便：
+
+```
+val person: Person? = getTheBestPersonInTheWorld()
+if(person != null) sendEmailTo(person.email)
+```
+
+和功能相同但没有额外变量的代码：
+
+```
+getTheBestPersonInTheWorld()?.let { sendEmailTo(it.email)}
+```
+
+若getTheBestPersonInTheWorld()函数返回null，Lambda中的代码永远不会被执行。
+
+当需要检查多个值是否为null时，可以使用嵌套的let调用来处理。
+
+### 延迟初始化的属性
+
+在Android中，Activity的初始化就发生在onCreate方法中。Kotlin通常要求你在构造方法中初始化所有属性，若某个属性是非空类型，就必须提供非空的初始化值。否则，就必须使用可空类型。
+
+```
+class MyService {
+    fun performAction(): String = "foo"
+}
+
+class MyTest {
+    private var myService: MyService = null // 声明一个可空类型的属性并初始化为null
+
+    @Befoer fun setUp() {
+        myService = MyService()        // 在setUp方法中提供真正的初始化器
+    }
+
+    @Test fun testAction() {
+        Assert.assertEquals("foo",myService!!.performAction()) // 必须注意可空性
+    }
+}
+```
+
+这段代码很难看，尤其是要反复使用这个属性的时候。为了解决这个问题，可以把myService属性声明成可以*延迟初始化的，使用lateinit修饰符来完成这样的声明*。
+
+```
+// 使用延迟初始化属性
+class MyTest {
+    private lateinit var myService: MyService
+
+    @Before fun setUp() {
+        myService = MyService()
+    }
+
+    @Test fun testAction() {
+        ...
+    }
+}
+```
+
+延迟初始化的属性都是var，因为需要在构造方法外修改它的值，而val属性会被编译成必须在构造方法中初始化的final字段。
+
+尽管这个属性是非空类型，但是你不需要在构造方法中初始化它。若在属性被初始化之前就访问了它，会得到异常：”lateinit property myService has not been initialized“。
+
+*注意：lateinit属性常见的一种语法是依赖注入。这种情况下，lateinit属性的值是被依赖注入框架从外部设置的。*
+
+### 可空类型的扩展
+
+为可空类型定义扩展函数式一种更强大的处理null值的方式。可以允许接收者为null的（扩展函数）调用，并在该函数中处理null，而不是在确保变量不为null之后再调用它的方法。
+
+Kotlin标准库中定义的String的两个扩展函数isEmpty和isBlank就是这样的例子。第一个函数判断字符串是否是一个空的字符串”“。第二个函数则判断它是否是空的或者它只包含空白字符。函数isEmptyOrNull和isNullOrblank就可以由String?类型的接收者调用。
+
+```
+fun verifyUserInput(input: String?) {
+    if(input.isNullOrBlank()) {
+        println("Please fill in the required fields")
+    }
+    ...
+}
+
+verifyUserInput(" ") ------> Please fill in the required fields
+verifyUserInput(null) -----> Please fill in the required fields
+```
+
+*不需要安全访问，可以直接调用为可空接收者声明的扩展函数。*
+
+为一个可空类型（以?结尾）定义扩展函数时，意味着你可以对可空的值调用这个函数：并且函数体中的this可能为null，所以你必须显式地检查。
+
+在Java中，this永远是非空的，因为它引用的是当前你所在类的实例。而在Kotlin中，这并不永远成立：在可空类型的扩展函数中，this可以为null。
+
+当定义自己的扩展函数时，需要考虑该扩展是否需要为可空类型定义。默认情况下，应该把它定义成非空类型的扩展函数，若发现大部分情况下需要在可空类型上使用，可以稍后再安全地修改。
+
+### 类型参数的可空性
+
+Kotlin中所有泛型类和泛型函数的类型参数默认都是可空的。使用类型参数作为类型的声明都允许为null，尽管类型参数T并没有用问号结尾：
+
+```
+fun <T> printHashCode(t: T) {
+    println(t?.hashCode())
+}
+```
+
+类型参数T推导出的类型是可空类型Any?。因此尽管没有用问号结尾，实参t依然允许持有null。
+
+*要使类型参数非空，必须要为它指定一个非空的上界，那样泛型会拒绝可空值作为实参*
+
+```
+fun <T: Any> printlnHashCode(t: T) {
+    println(t.hashCode())
+}
+```
+
+现在这个函数就不能传null值了。
+
+### 可空性和Java
+
+Kotlin引以为豪的是和Java的互操作性，而Java的类型系统是不支持可空性的，那当混合使用Kotlin和Java时会发生什么？
+
+首先，有时候Java代码包含了可空性的信息，这些信息用注解来表达。因此Java中的@Nullable String被Kotlin当作String?，而@NotNull String就是String。
+
+根据Java类型的注解，Java类型会在Kotlin中表示为可空类型和非空类型。
+
+#### 平台类型
+
+平台类型本质上就是*Kotlin不知道可空性信息的类型。既可以把它当作可空类型处理，也可以当作非空类型处理*。这意味着，对这个类型做的操作我们需要负有全部责任。
+
+```
+// Java 定义
+public class Person {
+    private final String name;
+
+    public Person(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+```
+
+getName()能不能返回null，Kotlin编译器发完全不知道String类型的可空性，所以必须自己处理它。
+
+```
+fun yellAt(person: Person) {
+    println(person.name.toUpperCase())
+}
+
+yellAt(Person(null))
+------> java.lang.IllegalArgumentException:Paramper specified as non-null is null:method toUpperCase,paremeter $receiver
+```
+
+若null值调用了方法，看到的不是NullPointerException，而是一条更详细的错误信息，告诉你方法toUpperCase不能在null的接收者上调用。
+
+对于公有的Kotlin函数，编译器会生成对每个非空类型的参数（和接收者）的检查，所以，使用不正确的参数的调用尝试都会立即被报告为异常。
+
+```
+// 使用null检查来访问Java类
+fun yellAtSafe(person: Person) {
+    println((person.name ?: "Anyone").toUpperCase())
+}
+```
+
+对Kotlin来说，把来自Java的所有值都当成可空的是不是更安全？这种设计也许可行，但是这需要对永远不为空的值做大量冗余的null检查，因为Kotlin编译器无法了解到这些信息。
+
+涉及泛型的话这种情况就更糟糕了。例如，在Kotlin中，每个来自Java的ArrayList<String>都被当作AttayList<String?>?，每次访问或者转换类型都需要检查这些值是否为null，这将抵消掉安全性带来的好处。所以Kotlin的设计者做出了更实用的选择，让开发者负责正确地处理来自Java的值。
+
+*注意：在Kotlin中不能声明一个平台类型的变量，这些类型只能来自Java代码。*
+
+```
+val i: Int = person.name
+ERROR: Type mismatch: interferd type is String! but Int was expected
+```
+
+String!表示法被Kotlin编译器用来表示来自Java代码的平台类型。
+
+#### 继承
+
+在Kotlin中重写Java的方法时，可以选择把参数和返回类型定义成可空的，也可以选择把它们定义成非空的。
+
+*注意：在实现Java类或者接口的方法时一定要搞清楚它的可空性。*
+
+## 基本数据类型和其他基本类型
+
+与Java不一样的是，Kotlin并不区分基本数据类型和它们的包装类。
+
+### 基本数据类型：Int，Boolean以及其他
+
+Java把基本数据类型和引用类型做了区分。一个*基本数据类型（如int）*的变量直接存储了它的值，而一个*引用类型（如Integer）*的变量存储的是指向包含该对象的内存地址的引用。
+
+基本数据类型的值能够更高效地存储和传递，但是不能对这些值调用方法，或是把它们存放在集合中。Java提供了特殊的包装类型（Integer，Boolean等），在需要对象的时候对基本数据类型进行封装。
+
+*Kotlin并不区分基本数据类型和包装类型，使用的永远是同一个类型（比如Int）*：
+
+```
+val i: Int = 1
+val list: List<Int> = listOf(1,2,3)
+```
+
+这样很方便，此外，还能对一个数字类型的值调用方法：
+
+```
+fun showProgress(progress: Int) {
+    val percent = progress.coerceIn(0,100)
+}
+```
+
+对于变量，属性，参数和返回类型：Kotlin的Int类型会被编译成Java基本数据类型int。唯一不可行的例外是泛型类，比如集合。
+
+在Kotlin中使用Java声明时，Java基本数据类型会变成非空类型（而不是平台类型），因为它们不能持有null值。
+
+### 可空的基本数据类型：Int?，Boolean?以及其他
+
+Kotlin中的可空类型不能用Java的基本数据类型表示，*任何时候只要用了基本数据类型的可空版本，它就会编译成对应的包装类型*。
+
+JVM不支持用基本数据类型作为类型参数，所以泛型类（Java和Kotlin一样）必须始终使用类型的包装表示。
+
+### 数字转换
+
+Kotlin不会自动地把数字从一种类型转换成另外一种，即使是转换成范围更大的类型。
+
+```
+val i = 1
+val l: Long = i // 错误：类型不匹配
+```
+
+相反，必须显式地进行转换：
+
+```
+val i = 1
+val l: Long = i.toLong()
+```
+
+每一种基本数据类型（除了Boolean）都定义有转换函数。这些函数支持双向转换：既可以把小范围的类型扩展到大范围，也可以把大范围的类型截取到小范围。
+
+Kotlin要求转换必须是显式的，尤其是在比较装箱值的时候。
+
+若在代码中同事用到了不同的数字类型，必须显式地转换这些变量。
+
+当你书写数字字面值的时候，一般不需要使用转换函数。使用数字字面值去初始化一个类型已知的变量时，又或是把字面值作为实参传给函数时，必要的转换会自动发生：
+
+```
+fun foo(l: Long) = println(l)
+foo(42) // 编译器认为42是一个Long类型
+```
+
+Kotlin算术运算符关于数值范围溢出的行为和Java完全一致：Kotlin并没有引入由溢出检查带来的额外开销。
+
+### “Any”和“Any?”：根类型
+
+和Object作为Java类层级结构的根差不多，Any类型是Kotlin所有非空类型的超类型（非空类型的根）。
+
+和Java一样，把基本数据类型的值赋给Any类型的变量时会自动装箱：
+
+```
+val answer: Any = 42 // Any是引用类型，所以值42会被装箱
+```
+
+*注意：Any是非空类型，所以Any类型的变量不可持有null值*。
+
+在底层，Any类型对应Object。Kotlin把Java方法参数和返回类型中用到的Object类型看做Any（更确切地是当作平台类型，因为其可空性未知）。
+
+所有Kotlin类都包含下面三个方法：toString，equals和hashCode。这些方法都继承自Any。Any并没有使用其他Object的方法（比如wait和notify）。
+
+### Unit类型：Kotlin的“void”
+
+Kotlin中的Unit类型完成了Java中的void一样的功能。
+
+```
+fun f(): Unit {...}
+fun f() {...}
+
+// 语法上，这两个函数没有什么不同
+```
+
+Kotlin函数使用Unit作为返回类型并且没有重写泛型函数，在底层它会被编译成旧的void函数。若要在Java代码中重写这个函数，新的Java函数需要返回void。
+
+```
+interface Processor<T> {
+    fun process(): T
+}
+
+class NoResultProcessor : Processor<Unit> {
+    override fun process() { // 返回Unit，但可以省略类型说明
+        ...                  // 这里不需要显式的return
+    }
+}
+```
+
+接口签名要求process函数返回一个值；而且，因为Unit类型确实有值，所以从方法中返回它并没有问题。然后不需要在process函数中写上显式的return语句，因为编译器会隐式地加上return Unit。
+
+Java中为了解决使用”没有值“作为类型参数的任何一种可能解法，都没有Kotlin的解决方案漂亮。一种选择是使用分开的接口定义来分别表示需要和不需要返回值的接口（如Callable和Runnable）。另一种是用特殊的Void类型作为类型参数。即便选择了后者，你函数需要加入一个return null；语句来返回唯一能匹配这个类型的值，因为只要返回类型不是void，就必须始终有显式的return语句。
+
+### Nothing类型：“这个函数永不返回”
+
+Nothing类型没有任何值，只有被当作函数返回值使用，或者被当作泛型函数返回值的类型参数使用才会有意义。
+
+返回Nothing的函数可以放在Elvis运算符的右边来做先决条件检查：
+
+```
+fun fail(message: String): Nothing {
+    throw IllegalStateException(message)
+}
+
+val address = company.address ?: fail("No address")
+```
+
+编译器知道这种返回类型的函数从不正常终止，然后在分析调用这个函数的代码时利用这个信息。
+
+## 集合与数组
+
+### 可空性和集合
+
+```
+// 创建一个包含可空值的集合
+fun readNumber(reader: BufferedReader): List<Int?> {
+    val result = ArrayList<Int?>()
+    for (line in reader.lineSequence()) {
+        try {
+            val number = line.toInt()
+            result.add(number)
+        } catch(e: NumberFormatException) {
+            result.add(null)
+        }
+    }
+    return result
+}
+```
+
+*注意：变量自己类型的可空性和用作参数类型的类型的可空性是有区别的！*
+
+包含可空Int的列表和包含Int的可空列表之间的区别：
+* List<Int?>：列表中的单个值是可空的
+* List<Int>?：整个列表是可空的
+
+*要小心决定什么是可空的：集合的元素还是集合本身。*
+
+### 只读集合与可变集合
+
+Kotlin的集合设计和Java不同的另一项重要特质是：它把访问集合数据的接口和修改集合数据的接口分开了。
+
+* kotlin.collections.Collection：可以遍历集合中的元素，获取集合大小，判断集合中是否包含某个元素，以及执行其他从集合中读取数据的操作。
+* kotlin.collections.MutableCollection：可以修改集合中的数据
+
+一般的规则是在代码的任何地方都应该使用只读接口，只在代码需要修改集合的地方使用可变接口的变体。
+
+```
+fun <T> copyElements(source: Collection<T>, target: MutableCollection<T>) {
+    for(item in source) {
+        target.add(item) // 向可变的Target集合中添加元素
+    }
+}
+```
+
+不能把只读集合类型的变量作为target参数传给函数，即便它的值是一个可变集合：
+
+```
+val source: Collection<Int> = arrayListOf(3,5,7)
+val target: Collection<Int> = arrayListOf(1)
+copyElements(source,target)
+
+ERROR:Type mismatch:...
+```
+
+使用集合接口时需要牢记的一个关键点是：*只读集合不一定是不可变的*。若你使用的变量拥有一个只读接口类型，它可能只是同一个集合的众多引用中的一个。任何其他的引用都可能拥有一个可变接口类型。
+
+*只读集合并不总是线程安全的*。
+
+### Kotlin集合和Java
+
+每一个Kotlin接口都是对应Java集合接口的一个实例。在Kotlin和Java之间转移并不需要转换：不需要包装器也不需要拷贝数据。但是每一种Java集合接口在Kotlin中都有两种表示：*一种是只读的，另一种是可变的*。
+
+|集合类型|只读|可变|
+|-------|---|----|
+|List|listOf|mutableListOf，arrayListOf|
+|Set|setOf|mutableSetOf，hashSetOf，linkedSetOf，sortedSetOf|
+|Map|mapOf|mutableMapOf，hashMapOf，linkedMapOf，sortedMapOf|
+
+当需要调用一个Java方法并把集合作为实参传给它时，可以把任意Collection或MutableCollection的值作为实参传递给这个形参。
+
+因为Java并不会区分只读集合与可变集合，即使Kotlin中把集合声明成只读的，Java代码也能够修改这个集合。
+
+### 作为平台类型的集合
+
+Java中声明的集合类型的变量也被视为平台类型。一个平台类型的集合本质上就是可变性未知的集合——Kotlin代码将其视为只读的或者可变的。
+
+当重写或者实现签名中有集合类型的Java方法时这种差异变得重要。需要决定使用哪一种Kotlin类型来表示这个Java类型，它来自你要重写或实现的方法。
+
+### 对象和基本数据类型的数组
+
+*默认情况下，应该优先使用集合而不是数组。*
+
+```
+fun main(args: Array<String>) {
+    for (i in args.indices) {
+        println("Argument $i is: ${args[i]}")
+    }
+}
+```
+
+Kotlin中的一个数组是一个带有类型参数的类，其元素类型被指定为相应的类型参数。
+
+要在Kotlin中创建数组，有这些方法：
+
+* arrayOf函数创建一个数组，它包含的元素时指定为该函数的实参
+* arrayOfNulls 创建一个给定大小的数组，包含的是null元素。当然，它只能用来创建包含元素类型可空的数组
+* Array构造方法接收数组的大小和一个Lambda表达式，调用Lambda表达式来创建每一个数组元素。使用非空元素类型来初始化数组，但不用显示地传递每个元素。
+
+```
+// 创建字符数组
+
+val letters = Array<String>(26) {i -> ('a' + i).toString()}
+```
+
+Lambda接收数组元素的下标并返回放在下标位置的值。
+
+和其他类型一样，数组类型的类型参数始终会变成对象类型。若声明了一个Array<Int>，它将会是一个包含装箱整型的数组。若需要创建没有装箱的基本数据类型的数组，必须使用一个基本数据类型数组的特殊类。
+
+为了表示基本数据类型的数组，Kotlin提供了若干独立的类，每一种基本数据类型都对应一个。比如IntArray，BooleanArray等。所有这些类型都被编译成普通的Java基本数据类型整数，比如int[]，boolean[]等。一次这些数组中的值存储时并没有装箱，而是使用了可能的最高效的方式。
+
+要创建一个基本数据类型的数组，有如下选择：
+
+* 该类型的构造方法接收size参数并返回一个使用对应基本数据类型默认值初始化好的数组
+* 工厂函数（IntArray的，以及其他数据类型的函数）接收边长参数的值并创建存储这些值的数组
+* 接收一个大小和一个用来初始化每个元素的Lambda
+
+出了基本操作，Kotlin标准库支持一套和集合相同的用于数组的扩展函数。filter和map等函数也适用于数组，包括基本数据类型的数组。（这些方法的返回值是列表而不是数组）
+
+## 总结
+
+* Kotlin对可空类型的支持，可以帮助我们在编译期，检测出潜在的NPE错误。
+
+* Kotlin提供了想安全调用（?.），Elvis运算符（?:），非空断言（!!）以及let函数这样的工具来简洁地处理可空类型。
+
+* as?运算符提供了一种简单的方式来把值转换成一个类型，以及处理当它拥有不同类型时的情况。
+
+* Java中的类型在Kotlin中被解释成平台类型，允许开发者把它们当做可空或非空来对待。
+
+* 表示基本数字的类型（如Int）看起来用起来都像是普通的类，但通常会被编译成Java基本数据类型。
+
+* 可空的基本数据类型（如Int?）对应着Java中的装箱基本数据类型（如Integer）。
+
+* Any类型是所有其他类型的超类型，类似于Java的Object。而Unit类比于void。
+
+* 不会正常终止的函数使用Nothing类型作为返回类型。
+
+* Kotlin使用标准Java集合类，并通过区分只读和可变集合来增强它们。
+
+* 当你在Kotlin中继承Java类或者实现Java接口时，需要仔细考虑参数的可空性和可变性。
+
+* Kotlin的Array类就像普通的泛型类，但它会被编译成Java数组。
+
+* 基本数据类型的数组使用像IntArray这样的特殊类来表示。

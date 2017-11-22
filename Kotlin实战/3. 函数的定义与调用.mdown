@@ -1,0 +1,564 @@
+# 函数的定义与调用
+
+## 在Kotlin中创建集合
+
+```
+val set = hashSetOf(1,2,3) // 创建一个HashSet
+val list = arrayListOf(1,2,3) // 创建一个ArrayList
+val map = hashMapOf(1 to "one",2 to "two",3 to "three") // 创建一个HashMap
+```
+
+Kotlin没有采用自己的集合类，而是采用的标准的Java集合类。这样，Kotlin可以更容易与Java代码交互，当从Kotlin中调用Java函数的时候，不用转换它的集合类来匹配Java的类，反之亦然。
+
+## 让函数更好调用
+
+Java的集合都有一个默认的toString实现，但是它格式化的输出是固定的，而且往往不是我们需要的样子。
+
+```
+val list = arrayListOf(1,2,3)
+println(list)  ---------->[1,2,3]
+```
+
+若我们想用分号分隔每一个元素，然后用括号括起来，而不是采用默认实现用的方括号，我们先来自己实现这个函数
+
+```
+fun <T> joinToString(collection: Collection<T>,separator: String,prefix: String,postfix: String) : String {
+
+    val result = StringBuilder(prefix);
+    for((index,element) in collection.withIndex()) {
+        if(index > 0) result.append(separator)
+        result.append(element)
+    }
+    result.append(postfix)
+    return result.toString()
+}
+```
+
+这个函数是泛型，支持任意类型元素的集合
+
+### 命名参数
+
+先看一个上面函数的调用*joinToString(collection," "," ",".")*，能看出这些String都对应的是什么参数吗？若不去查看函数的声明，我们很难知道。
+
+有一些Java编程的风格，要求通过添加注释，在注释中指明参数的名称
+
+```
+// Java 
+joinToString(collection,/* separator */ " ",/* prefix */ " ",/* postfix */ ".");
+```
+
+在Kotlin中，可以做的更优雅
+
+```
+joinToString(collection,separator = " ",prefix = " ",postfix = ".")
+```
+
+当调用一个Kotlin定义的函数时，可以显式地表明一些参数的名称。
+
+**注意：在调用一个函数时，指明了一个参数的名称，为了避免混淆，之后的所有的参数都需要表明名称**
+
+**警告：当调用Java的函数时，不能采用命名参数。把参数名称存到.class文件是Java 8 及其更高版本的功能，Kotlin需要保持和Java 6 的兼容性，所以不行**
+
+### 默认参数值
+
+Java的另一个普遍存在的问题是，一些类重载函数实在太多了。导致：*重复*，当我们调用省略了部分参数的重载函数时，可能会搞不清它们到底用的是哪个。
+
+在Kotlin中，*可以声明函数的时候，指定参数的默认值，避免创建重载的函数*
+
+```
+fun <T> joinToString(collection: Collection<T>
+                    ,separator: String = ","
+                    ,prefix: String = ""
+                    ,postfix: String = "") : String {...}
+
+joinToString(list,",","","") -------->1,2,3
+joinToString(list) ------------>1,2,3
+joinToString(list,";") -------------> 1;2;3
+```
+
+当常规的调用时，必须按照函数声明中定义的参数顺序来给定参数，可以省略的只有排在末尾的参数。若使用命名参数，可以省略中间的一些参数，也可以以想要的任何顺序给定参数
+
+```
+joinToString(collection, postfix = ";",prefix = "#") ---------> #1,2,3;
+```
+
+**注意：从Java中调用Kotlin函数的时候，必须显式地指定所有参数值**。
+
+若需要从Java中频繁的使用，而且希望它能对Java的调用者更简便，可以用*@JvmOverloads*注解它。这个指示编译器生成Java重载函数，从最后一个开始省略每个参数。
+
+若上面的函数注解了@JvmOverloads，编译器会生成如下重载函数
+
+```
+joinToString(Collection<T> collection,String separator,String prefix,String postfix)
+
+joinToString(Collection<T> collection,String separator,String prefix)
+
+joinToString(Collection<T> collection,String separator)
+
+joinToString(Collection<T> collection)
+```
+
+### 消除静态工具类：顶层函数和属性
+
+Java中有很多类不包含任何的状态或者实例函数，仅仅作为一堆静态函数的容器。比如以Util作为后缀命名的工具类。
+
+在Kotlin中，不需要去创建这些无意义的类。可以把这些函数直接放到代码文件的顶层，不用从属于任何的类。这些放在文件顶层的函数依然是包内的成员，需要从包外访问它，则需要import，但不再需要额外包一层。
+
+要改变包含Kotlin顶层函数的生成的类的名称，需要为这个文件添加@JvmName的注解，将其放在这个文件的开头，位于包名的前面
+
+```
+@file:JvmName("StringFunctions") // 注解指定类名
+
+package strings                  // 包的声明跟在文件注解之后
+
+fun joinToString(...): String{...}
+
+这样我们在Java中调用这个函数
+
+import strings.SringFunctions;
+StringFunctions.joinToString(...);
+```
+
+#### 顶层属性
+
+和函数一样，属性也可以放到文件的顶层。在一个类的外面保存单独的数据片段。
+
+```
+var opCount = 0;
+
+fun performOperation() {
+    opCount++
+}
+
+fun reprotOperationCount() {
+    println(opCount)
+}
+```
+
+在代码中用顶层属性来定义常量。
+
+val UNIX_LINE_SEPARETOR = "\n"
+
+默认情况下，顶层属性和其他任意的属性一样，是通过访问器暴露给Java使用的。若想要把一个常量以public static final 的属性暴露给Java，可以用*const*来修饰它。（这个适用于所有的基本数据类型的属性，以及String类型）
+
+## 扩展函数和属性
+
+在一个现有Java项目中集成Kotlin的时候，依然要面临现有代码目前不能转换成Kotlin，甚至将来也不会转成Kotlin的局面。当使用这些API的时候，若不用重写，就能使用到Kotlin为它带来的方便，就可以使用扩展函数来实现。
+
+*扩展函数*非常简单，它就是一个类的成员函数，不过定义在类的外面
+
+```
+package strings
+
+fun String.lastChar(): Char = this.get(this.length - 1)
+    ^                           ^       ^
+    接收者类型                    接收者对象
+```
+
+把要扩展的类或接口的名称，放到即将添加的函数的前面。类的名称为*接收者类型*，调用这个扩展函数的对象，叫做*接收者对象*
+
+可以像调用类的普通成员函数一样去调用这个函数：
+
+```
+println("Kotlin".lastChar()) --------> n
+```
+
+这里，String就是接收者类型，“Kotlin”就是接收者对象
+
+我们已经为String类型添加了自己的方法，即使字符串不是代码的一部分，也没有类的源代码，依然可以在自己的项目中根据需要去扩展方法。
+
+在扩展函数中，可以像其他成员函数一样用*this*，也可以像普通的成员函数一样，*省略它*
+
+```
+fun String.lastChar(): Char = get(length - 1)
+```
+
+在扩展函数中，可以直接访问被扩展的类的其他方法和属性，就像在类自己的方法中访问它们一样。
+
+*注意：扩展函数并不允许打破类的封装性，扩展函数不能访问私有的或者是受保护的成员。*
+
+### 导入和扩展函数
+
+定义一个扩展函数，它不会自动地在整个项目范围内生效。若要使用它，需要进行导入。
+
+```
+import strings.lastChar
+
+val c = "Kotlin".lastChar()
+```
+
+可以使用关键字*as*来修改导入的类或者函数名称
+
+```
+import strings.lastChar as last
+
+val c = "Kotlin".last()
+```
+
+### 从Java中调用扩展函数
+
+实质上，扩展函数是静态函数。调用扩展函数，不会创建适配的对象或者任何运行时的额外消耗。
+
+从Java中调用Kotlin的扩展函数非常简单：调用这个静态函数，然后把接收者对象作为第一个参数传进去即可。和其他顶层函数一样，包含这个函数的Java类的名称，*由这个函数声明的文件名称决定。*
+
+比如上面的扩展函数声明在一个叫作“StringUtil.kt”的文件中：
+
+```
+char c = StringUtilKt.lastChar("Kotlin");
+```
+
+扩展函数被声明为顶层函数，所以，它将会被编译为一个静态函数。
+
+### 作为扩展函数的工具函数
+
+joinToString函数可以写一个终极版本
+
+```
+fun <T> Collection<T>.joinToString(
+        separator: String = ",",
+        prefix: String = "",
+        postfix: String = ""): String {
+            val result = StringBuilder(prefix)
+
+            for((index,element) in this.withIndex()) {
+                if(index > 0) result.append(separator)
+                result.append(element)
+            }
+            result.append(postfix)
+            return result.toString()
+        }
+
+val list = arrayListOf(1,2,3)
+println(list.joinToString(separator = ";",prefix = "(",postfix = ")")) -->(1;2;3)
+```
+
+扩展函数无非就是静态函数的一个高效的语法糖，可以使用更具体的类型来作为接收者类型，而不是一个类。
+
+假设想要一个join函数，只能由字符串的集合来触发：
+
+```
+fun Collection<String>.join(separator = ";",prefix = "(",postfix = ")") = joinToString(separator,prefix,postfix)
+
+val list = listOf("Java","Kotlin","C")
+println(list.join()) --------> (Java;Kotlin;C)
+```
+
+### 不可重写的扩展函数
+
+*扩展函数的静态性质决定了扩展函数不能被子类重写*
+
+```
+open class View{
+    open fun click() = println("View clicked")
+}
+
+class Button : View() {
+    override fun click() = println("Button clicked")
+}
+```
+
+声明了一个类型为View的变量，它可以被赋值为Button类型的对象，调用这个变量的一般函数（比如click()），将会调用到Button重写的函数。
+
+但是对于扩展函数来说，并不是这样的。扩展函数并不是类的一部分，它是声明在类外的。当这个扩展函数被调用时，由该变量的静态类型所决定，而不是这个变量的运行时类型。
+
+```
+fun View.showOff() = println("I'm a View")
+fun Button.showOff() = println("I'm a Button")
+
+val view = Button()
+view.showOff() ----------> "I'm a View"
+```
+
+扩展函数并不存在重写，因为Kotlin会把它们当做静态函数对待。
+
+*注意：若一个类的成员函数和扩展函数有相同的签名，成员函数往往会被优先使用。*
+
+### 扩展属性
+
+扩展属性提供了一种方法，用来扩展类的API，可以用来访问属性，用的是属性语法而不是函数的语法。
+
+*注意：尽管它们被称为属性，但它们可以美元任何状态，因为没有合适的地方存储，不可能给现有的Java对象的实例添加额外的字段。*
+
+```
+// 声明一个扩展属性
+
+val String.lastChar: Char
+    get() = get(length - 1)
+```
+
+扩展属性也像接收者的一个普通的成员属性一样。*必须定义getter函数，因为没有支持字段，因此没有默认getter的实现。初始化也不可以，因为没有地方存储初始值。*
+
+```
+// 声明一个可变的扩展属性
+
+var StringBuilder.lastChar: Char
+    get() = get(length - 1)
+    set(value: Char) {
+        this.setCharAt(length - 1,value)
+    }
+
+val sb = StringBuilder("Kotlin?")
+
+println(sb.lastChar) ---------> ?
+
+sb.lastChar = '!'
+println(sb) -----------> Kotlin!
+println(sb.lastChar) ---------> !
+```
+
+从Java中访问扩展属性的时候，应该显式地调用它的getter函数：StringUtilKt.getLastChar("Java")
+
+## 处理集合：可变参数，中缀调用和库的支持
+
+* 可变参数的关键字*vararg*，可以用来声明一个函数将可能有任意数量的参数
+* 中缀表示法，在调用一些只有一个参数的函数时，会让代码更简练
+* *解构声明*，用来把一个单独的组合值展开到多个变量中
+
+### 扩展Java集合的API
+
+Kotlin中的集合与Java的类相同，但对API做了扩展。同样是Java库类的实例，为什么在Kotlin中能对集合有这么多丰富的操作？*因为很多函数都被声明成了扩展函数。*
+
+许多扩展函数在Kotlin标准库中都有声明。标准库的引用会列出库中每个类的所有可用的函数，包括成员函数与扩展函数。
+
+### 可变参数：让函数支持任意数量的参数
+
+在Kotlin中，调用一个函数来创建列表的时候，可用传递任意个数的参数给它：
+
+```
+val list = listOf(2,3,5,7,11)
+```
+
+这个函数在库中的声明为：
+
+```
+fun listOf<T>(vararg values: T): List<T> {...}
+```
+
+在Java中可变参数使用*...*。Kotlin的可变参数与Java类似，但语法略有不同：*在参数上使用vararg修饰符*
+
+另一个区别：当需要传递的参数已经包装在数组中时，调用该函数的语法：在Java中，可以按原样传递数组，而Kotlin则要求显式地解包数组，以便每个数组元素在函数中能作为单独的参数来调用。
+
+```
+fun main(args: Array<String>) {
+    val list = listOf("args", *args) // 展开运算符展开数组内容
+}
+```
+
+通过展开运算符，可以在单个调用中组合来自数组的值和某些固定值，这在Java中并不支持。
+
+### 键值对的处理：中缀调用和解构声明
+
+使用mapOf函数来创建map
+
+```
+val map = mapOf(1 to "one", 2 to "two", 3 to "three")
+```
+
+这个代码中的to不是内置结构，而是一种特殊的函数调用：*中缀调用*
+
+在中缀调用中，没有添加额外的分隔符，函数名称是直接放在目标对象名称和参数之间的。中缀调用可以与只有一个参数的函数一起使用。
+
+要允许使用中缀符号调用函数，需要使用*infix修饰符*来标记函数
+
+```
+infix fun Any.to(other: Any) = Pair(this,other)
+```
+
+可以直接用Pair的内容来初始化两个变量：
+
+```
+val (number,name) = 1 to "one"
+```
+
+这个功能称为*解构声明*
+
+解构声明特征不止用于Pair，还可以使用map的key和value内容来初始化两个变量（比如循环中使用withIndex()）：
+
+```
+for((index,element) in map.withIndex()) {
+    ...
+}
+```
+
+## 字符串和正则表达式的处理
+
+Kotlin字符串与Java字符串完全相同。可以将Kotlin代码中创建的字符串传递给任何Java函数，也可以把任何Kotlin标准库函数应用到从Java代码接收的字符串上，不用转换，也不用创建附加的包装对象。
+
+### 分割字符串
+
+String的spilt方法很常用，但是下面的例子：
+
+```
+String s = "12.345-6.A"
+s.spilt(".") --------> 返回的是一个空数组
+```
+
+因为spilt函数将一个正则表达式作为了参数，并根据表达式将字符串分割成多个字符串。Java中“.”是表示任何字符的正则表达式。
+
+Kotlin把这个令人费解的函数隐藏了，替换了一个split，具有不同参数重载的扩展函数。用来承载正则表达式的值需要一个Rexgex类型，而不是String。
+
+```
+String s = "12.345-6.A"
+s.split("\\.|-".toRegex()) ----------> [12,345,6,A]
+```
+
+Kotlin使用与Java完全相同的正则表达式语法。使用正则表达式的API也类似于标准Java库API，但更为通用。
+
+Kotlin中的split扩展函数的其他重载支持任意数量的纯文本字符串分隔符：
+
+```
+String s = "12.345-6.A"
+s.split(".","-") -----------> [12,345,6,A]
+```
+
+### 正则表达式和三重引号的字符串
+
+一个列子：解析文件的完整路径名称到对应的组件：目录，文件名和扩展名。一种使用扩展函数来处理，另一个使用正则表达式：
+
+```
+目录为 path = "/Users/Document/kotlin/chapter.doc"
+
+
+// 使用扩展函数类解析文件路径
+fun parsePath(path: String) {
+    val directory = path.substringBeforeLast("/")
+    val fullName = path.substringAfterLast("/")
+
+    val fileName = fullName.substringBeferLast(".")
+    val extension = fullName.substringAfterLast(".")
+
+    println(Dir:$directory,name:$filaName,$ext:$extension)
+}
+parsePath(path) --------->Dir:/Users/Document/kotlin/,name:chapter,ext:doc
+
+// 使用正则表达式解析文件路径
+fun parsePath(path: String) {
+    val regex = """(.+)/(.+)\.(.+)""".toRegex()
+    val matchResult = regex.matchEntire(path)
+    if(matchResult != null) {
+        val (directory,fileName,extension) = matchResult.destructured
+        println(Dir:$directory,name:$filaName,$ext:$extension)
+    }
+}
+parsePath(path) --------->Dir:/Users/Document/kotlin/,name:chapter,ext:doc
+```
+
+解析字符串在Kotlin中变得更加容易，而且不需要使用正则表达式，虽然功能强大，但是有时令人费解。
+
+正则表达式写在一个*三重引号的字符串*中。这样的字符串中，不需要对任何字符进行转义，包括反斜杠，所以可以用"\\."而不是“\\\\.”
+
+### 多行三重引号的字符串
+
+三重引号字符串的目的，不仅在于避免转义字符，而且是它可以包含任何字符，包括换行符。
+
+```
+val kotlinLogo = """| //
+                   .|//
+                   .|/ \"""
+println(kotlinLogo.trimMargin(".")) // 去掉缩进
+
+| //
+|//
+|/ \
+```
+
+多行字符串包含三重引号之间的所有字符，包括用于格式化代码的缩进。若要更好地表示这样的字符串，可以去掉缩进（左边距）。
+
+一个三重引号的字符串可以包含换行，而不用专门的字符。另一方面，可以不必写转义字符\\，所以windows风格的路径“C:\\\\Users\\\\Document\\\\kotlin”可以写成“C:\\Users\\Document\\kotlin”。
+
+可以在多行字符串中使用字符模板。若需要在字符串的内容中使用美元符号的字面量，*必须使用嵌入式表达式*：val price = """$ { '$' } 99.9"""
+
+需要使用多行字符串的一个地方是测试！
+
+## 让你的代码更整洁：局部函数和扩展
+
+写代码我们要减少重复代码。写Java代码的时候，可以使用Extract Method的重构方法把长的方法分解成更小的代码块，然后重用这些代码。
+
+Kotlin提供了一个更整洁的方案：*可以在函数中嵌套这些提取的函数*，既可以获得所需的结构，也无须额外的语法开销。
+
+```
+class User(val id: Int,val name: String,val address: String)
+
+// 带重复的函数
+fun saveUser(user: User) {
+    if(user.name.isEmpty()) {
+        throw IllegalArgumentException(
+            "Can't save user ${user.id}:empty Name")
+    }
+    if(user.address.isEmpty()) {
+        throw IllegalArgumentException(
+            "Can't save user ${user.id}:empty Address")
+    }
+
+    // 保存user到数据库
+}
+
+// 提取局部函数来避免重复
+fun saveUser(user: User) {
+
+    fun validate(user: User,value: String, fieldName: String) {
+        if(value.isEmpty()) {
+            throw IllegalArgumentException(
+            "Can't save user ${user.id}:empty $fieldName")
+        }
+    }
+
+    validate(user,user.name,"Name")
+    validate(user,user.address,"Address")
+    // 保存user到数据库
+}
+
+// 在局部函数中访问外层函数的参数
+fun saveUser(user: User) {
+    fun validate(value: String,fieldName: String) {
+       if(value.isEmpty()) {
+            throw IllegalArgumentException(
+            "Can't save user ${user.id}:empty $fieldName")
+        } 
+    }
+    validate(user.name,"Name")
+    validate(user.address,"Address")
+    // 保存user到数据库
+}
+
+// 提取逻辑到扩展函数
+fun User.validateBeforeSave() {
+    fun validate(value: String, fieldName: String) {
+         if(value.isEmpty()) {
+            throw IllegalArgumentException(
+            "Can't save user $id:empty $fieldName")
+        }
+    }
+    validate(name,"Name")
+    validate(address,"Address")
+}
+fun saveUser(user: User) {
+    user.validateBeforeSave()
+
+    // 保存user到数据库
+}
+```
+
+在函数中可以嵌套函数，防止重复代码，这就是*局部函数*。
+
+局部函数可以访问所在函数中的所有变量和参数。
+
+扩展函数也可以被声明为局部函数。即User.validateBeforeSave函数也可以放到saveUser函数中，不过深度嵌套的局部函数往往让人费解。因此不建议使用多层嵌套。
+
+## 总结
+
+* Kotlin没有定义自己的集合类，而是在Java集合类的基础上提供了更丰富的API
+
+* Kotlin可以给函数参数定义默认值，大大降低了重载函数的必要性，而且命名参数让多参数函数的调用更加易读
+
+* Kotlin允许更灵活的代码结构：函数和属性可以直接在文件中声明，而不仅仅是在类中作为成员（顶层函数和属性）
+
+* Kotlin可以用扩展函数和属性来扩展任何类的API，包括在外部库中定义的类，而不需要修改其源码，也没有运行时开销
+
+* 中缀调用提供了处理单个参数的，类似调用运算符方法的简明语法
+
+* Kotlin为普通字符串和正则表达式都提供了大量的方便字符串处理的函数
+
+* 三重引号的字符串提供了一种简洁的方式，解决了原本在Java中需要进行大量啰嗦的转义和字符串链接的问题
+
+* 局部函数帮助你保持代码整洁的同时，避免重复

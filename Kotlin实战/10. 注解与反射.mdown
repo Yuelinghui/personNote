@@ -1,0 +1,728 @@
+# 注解与反射
+
+在使用类和函数的时候说明它们的确切名称，作为程序代码的一部分。调用函数，需要知道它定义在哪个类中，还有它的名称和参数类型。*注解与反射*提供了超越这个规则的能力，并让你编写出使用事先未知的任意类的代码。
+
+使用注解的语法与Java完全一样，而声明自己注解类的语法却略有不同。反射API的大体结构与Java相仿，但细节存在差异。
+
+JKid库，用来序列化和反序列化JSON。
+
+## 声明并应用注解
+
+一个注解允许你把额外的元数据关联到一个声明上。然后元数据就可以被相关的源代码工具访问，通过编译好的类文件或是在运行时，取决于这个注解是如何配置的。
+
+### 应用注解
+
+要应用一个注解，以@字符作为（注解）名字的前缀，并放在要注解的声明最前面。可以注解不同的代码元素，比如函数和类。
+
+```
+class MyTest {
+    @Test fun testTrue() {
+        ...
+    }
+}
+```
+
+@Deprecated注解，它在Kotlin中的含义和Java一样，但是Kotlin用replaceWith参数增强了它，让你可以提供一个替代者的（匹配）模式，以支持平滑地过渡到API的新版本。
+
+```
+@Deprecated("User removeAt(index) instead.", ReplaceWith("removeAt(index)"))
+fun remove(index: Int) {...}
+```
+
+实参在括号中传递，就像常规函数的调用一样。用了这个声明后，使用了remove函数，IDE不仅会提示应该使用哪个函数来代替它，还会提供一个自动的快速修正。
+
+注解只能拥有以下类型的参数：基本数据类型，字符串，枚举，类引用，其他的注解类，以及前面这些类型的数组。
+
+指定注解实参的语法与Java有些微小的差别：
+
+* 要把一个类指定为注解实参，在类名后加上::class：@MyAnnotation(MyClass::class)。
+
+* 要把另一个注解指定为一个实参，去掉注解名称前面的@。例如ReplaceWith是一个注解，但是把它指定为Deprecated注解的实参时没有用@。
+
+* 要把一个数组指定为一个实参，使用arrayOf函数：@RequestMapping(path = arrayOf("/foo","/bar"))。若注解类是在Java中声明的，命名为value的形参按需自动地被转换成可变长度的形参。
+
+注解实参需要在编译器就是已知的，所以不能引用任意的属性作为实参。把属性当作注解实参使用，需要用*const修饰符*标记它，来告知编译器这个属性是编译期常量。
+
+```
+const val TEST_TIMEOUT = 100L
+
+@Test(timeout = TEST_TIMEOUT) fun testMethod() {...}
+```
+
+用const标记的属性可以声明在一个文件的顶层或者一个object之中，而且必须初始化为基本数据类型或者String类型的值。
+
+### 注解目标
+
+*使用点目标*声明被用来说明要注解的元素。使用点目标被放在@符号和注解名称之间，并用冒号和注解名称隔开：
+
+```
+        @get:Rule
+         ^     ^
+         |     |
+    使用点目标 注解名称
+```
+
+要指定一个规则，在Java中需要声明一个用@Rule注解的public字段或者方法。若在你的Kotlin测试类中只是用@Rule注解了属性folder，会得到一个JUnit异常。要把它应用到getter上，要显式地写出来：
+
+```
+class HasFolder {
+    @get:Rule
+    val folder = TemporaryFolder()
+}
+```
+
+使用Java中声明的注解来注解一个属性，它会被默认地应用到相应的字段上。Kotlin也可以声明被直接对应到属性上的注解。
+
+Kotlin支持的使用点目标的完整列表：
+
+* property：Java的注解不能应用这种使用点目标
+* field：为属性生成的字段
+* get：属性的getter
+* set：属性的setter
+* receiver：扩展函数或者扩展函数的接收者参数
+* param：构造方法的参数
+* setparam：属性setter的参数
+* delegate：为委托属性存储委托实例的字段
+* file：包含在文件中声明的顶层函数和属性的类
+
+任何应用到file目标的注解都必须放在文件的顶层，放在package指令之前。`@file:JvmName("StringUtil")`。
+
+和Java不一样的是，Kotlin允许对任意的表达式应用注解，而不仅仅是类和函数的声明以及类型。
+
+```
+fun test(list: List<*>) {
+    @Suppress("UNCHECKED_CAST")
+    val strings = list as List<String>
+}
+```
+
+#### 用注解控制Java API
+
+Kotlin提供了各种注解来控制Kotlin编写的声明如何编译成字节码并暴露给Java调用者。其中一些注解代替了Java语言中对应的关键字：注解@Volatile和@Strictfp直接充当了Java的关键字volatile和strictfp的替身。其他注解则是用来改变Kotlin声明对Java调用者的可见性：
+
+* @JvmName将改变由Kotlin生成的Java方法或字段的名称。
+* @JvmStatic能被用在对象声明或者伴生对象的方法上，把它们暴露成Java的静态方法。
+* @JvmOverloads，指导Kotlin编译器为带默认参数值的函数生成多个重载。
+* @JvmField可以应用于一个属性，把这个属性暴露成一个没有访问器的公有Java字段。
+
+### 使用注解定制JSON序列化
+
+JKid是一个纯Kotlin的库，用来序列化和反序列化JSON。
+
+把实例传给serialize函数，然后它就返回一个包含该实例JSON表示法的字符串：
+
+```
+data class Person(val name: String, val age: Int)
+
+val person = Person("Alice",20)
+println(serialize(person)) -------> {"age": 20,"name":"Alice"}
+```
+
+要从JSON表示法中取回一个对象，调用deserialize函数：
+
+```
+val json = """{"name":"Alice","age":20}"""
+println(deserialize<Person>(json)) -------> Perso(name=Alice,age=20)
+```
+
+从JSON数据中创建实例的时候，必须显式地指定一个类作为类型参数。
+
+可以使用注解来定制对象序列化和反序列化的方式。
+
+* @JsonExclude 注解用来标记一个属性，这个属性排除在序列化和反序列化之外。
+* @JsonName 注解说明代表这个属性的（JSON）键值对中的键应该是一个给定的字符串，而不是属性的名称
+
+```
+data class Person (
+    @JsonName("alias") val name: String,
+    @JsonExclude val age: Int? = null
+)
+```
+
+必须制定属性age的默认值。否则，在反序列化时无法创建一个Person的新实例。
+
+### 声明注解
+
+```
+annotation class JsonExclude
+```
+
+语法看起来和常规类的声明很像，只是在class关键字之前加上了annotation修饰符。因为注解类只是用来定义关联到声明和表达式的元数据的结构，它们不能包含任何代码。*编译器禁止为一个注解类指定类主体。*
+
+对拥有参数的注解来说，在类的主构造方法中声明这些参数：
+
+```
+annotation class JsonName(val name: String)
+```
+
+对一个注解类的所有参数来说，val 关键字是强制的。
+
+在Java中声明同样的注解：
+
+```
+public @interface JsonName {
+    String value();
+}
+```
+
+Java注解有一个叫做value的方法，而Kotlin注解有一个name属性。Java中value方法很特殊：当你应用一个注解时，需要提供value以外所有指定特性显式名称。在Kotlin中应用注解就是常规的构造方法调用。
+
+可以使用命名实参语法让实参的名称变成显式的，或者可以省略掉这些实参的名称：
+
+```
+@JsonName(name = "first_name")
+@JsonName("first_name")
+```
+
+若需要把Java中声明的注解应用到Kotlin元素上，必须对除了value以外的所有实参使用命名实参语法，而value也会被Kotlin特殊对待。
+
+### 元注解：控制如何处理一个注解
+
+和Java一样，一个Kotlin注解类自己也可以被注解。可以应用到注解类上的注解被称为*元注解*。
+
+标准库定义的元注解中最常见的就是@Target。JKid中@JsonExclude和@JsonName的声明使用它为这些注解指定有效的目标：
+
+```
+@Target(AnnotationTarget.PROPERTY)
+annotation class JsonExclude
+```
+
+@Target元注解说明了注解可以被应用到元素类型。若不适用它，所有的声明都可以应用这个注解。
+
+要声明自己的元注解，使用ANNOTATION_CLASS作为目标：
+
+```
+@Target(AnnotationTarget.ANNOTATION_CLASS)
+annotation class BindingAnnotation
+
+@BindingAnnotation
+annotation class MyBinding
+```
+
+在Java代码中无法使用目标为PROPERTY的注解：要让这样的注解可以在Java中使用，可以给它添加第二个目标AnnotationTarget.FIELD。这样注解既可以应用到Kotlin中的属性上，也可以应用到Java中的字段上。
+
+Java中另一个重要的元注解：@Retention，它被用来说明声明的注解是否会存储到.class文件，以及在运行时是否可以通过反射来访问它。Java默认会在.class文件中保留注解但不会让它们在运行时被访问到。Kotlin的默认行为不同：*注解拥有RUNTIME保留期*。JKid中的注解没有显式地指定保留期。
+
+### 使用类做注解参数
+
+能够引用类作为声明的元数据。可以通过声明一个拥有类引用作为形参的注解类。
+
+```
+interface Company {
+    val name: String
+}
+
+data class CompanyImpl(override val name: String) : Company
+
+data class Person(
+    val name: String,
+    @DeserializeInterface(CompanyImpl::class) val company: Company
+    )
+```
+
+当JKid读到一个Person类实例嵌套的company对象时，它创建并反序列化一个CompanyImpl的实例，把它存储在company属性中。
+
+使用类名称后面加上::class关键字来引用一个类。
+
+KClass是Java的java.lang.Class类型在Kotlin中的对应类型。它用来保存Kotlin类的引用。
+
+### 使用泛型类做注解参数
+
+默认情况下，JKid把非基本数据类型的属性当成嵌套的对象序列化。可以改变这种行为并未某些值提供自己的序列化逻辑。
+
+@CustomSerilizer注解接收一个自定义序列化器类的引用作为实参。这个序列化器类应该实现ValueSerializer接口：
+
+```
+interface ValueSerializer<T> {
+    fun toJsonValue(value: T): Any?
+    fun fromJasonValue(jsonValue: Any?): T
+}
+```
+
+需要支持序列化日期，而且已经为此创建了自己的DateSerializer类，它实现了ValueSerializer<Date>接口：
+
+```
+data class Person(
+    val name: String,
+    @CustomSerializer(DateSerializer::class) val birthDate: Date
+)
+```
+
+ValueSerializer类是泛型的而且定义了一个类型形参，所以在引用该类型的时候需要提供一个类型实参值：
+
+```
+annotation class CustomSerializer(
+    val serializerClass: KClass<out ValueSerializer<*>>
+)
+```
+
+保证注解只能引用实现了ValueSerialzer接口的类。
+
+每一次需要使用类作为注解实参的时候都可以应用同样的模式。
+
+## 反射：在运行时对Kotlin对象进行自省
+
+一种在运行时动态地访问对象属性和方法的方式，不需要事前确定这些属性是什么。
+
+JSON序列化库就是反射最好的例子：它要能够把任何对象都序列化成JSON，所以它不能引用具体的类和属性。
+
+在Kotlin中使用反射时，会和两种不同的反射API打交道：
+
+1. 标准的Java反射，定义在包java.lang.reflect中。因为Kotlin类会被编译成普通的Java字节码，Java反射API可以完美地支持它们。即使用了反射API的Java库完全兼容Kotlin代码。
+
+2. Kotlin反射API，定义在包kotlin.reflect中。它让你能访问那些在Java中不存在的概念，诸如属性和可空类型。Kotlin反射API没有仅限于Kotlin类：能够使用同一的API访问任何JVM语言写成的类。
+
+*注意：Kotlin反射API被打包成了单独的.jar文件，即kotlin-reflect.jar。它不会被默认地添加到新项目的依赖中，若正在使用Kotlin反射API，要确保这个库作为依赖被添加。Maven坐标：org.jetbrains.kotlin:kotlin-reflect。*
+
+### Kotlin反射API：KClass，KCallable，KFunction和KProperty
+
+Kotlin反射API的主要入口就是KClass，它代表了一个类。可以用它列举和访问类中包含的所有声明，然后是它的超类中的声明，等等。
+
+要在运行时去的一个对象的类，首先使用javaClass属性获得它的Java类，等价于getClass()。然后访问该类的.kotlin扩展属性，从Java切换到Kotlin的反射API：
+
+```
+class Person(val name: String, val age: Int)
+
+val person = Perosn("Alice",20)
+val kClass = person.javaClass.kotlin
+println(kClass.simpleName) ----------> Person
+
+kClass.memberProperties.forEach {println(it.name)}
+--> age
+    name
+```
+
+使用.memberProperties来手机这个类，以及它的所有超类中定义的全部非扩展属性。
+
+由类的所有成员组成的列表是一个KCallable实例的集合。KCallable是函数和属性的超接口。它声明了call方法，允许调用对应的函数或者对应属性的getter：
+
+```
+interface KClass<T : Any> {
+    val members: Collection<KCallable<*>>
+}
+
+interface KCallable<out R> {
+    fun vall(vararg args: Any?): R
+}
+```
+
+把函数的实参放在vararg列表中提供给它：
+
+```
+fun foo(x: Int) = println(x)
+val kFunction = ::foo
+kFunction.call(42)
+```
+
+::foo这个表达式的值是来自反射API的KFunction类的一个实例。使用KCallable.call方法来调用被引用的函数。
+
+::foo表达式的类型是KFuncton1<Int, Unit>，它包含了形参类型和返回类型的信息。1表示这个函数接收一个形参。使用invoke方法通过这个接口来调用函数：
+
+```
+fun sum(x: Int, y: Int) = x + y
+val kFunction: KFunction2<Int, Int, Int> = ::sum
+kFunction.invoke(1,2) -------> 3
+kFunction.invoke(1) // ERROR
+```
+
+若有这样一个具体类型的KFunction，它的形参类型和返回类型是确定的，应该优先使用这个具体类型的invoke方法。call方法是对所有类型都有效的通用手段，但是它不提供类型安全性。
+
+每一个类型都继承了KFunction并加上一个额外的成员invoke，它拥有数量刚好的参数。这些类型称为*合成的编译器生成类型*，不会在包kotlin.reflect中找到它们的声明。可以使用任意数量的函数接口。*合成类型的方式减少了kotlin-reflect.jar的尺寸，同时避免了对函数类型参数数量的人为限制。*
+
+可以在一个KProperty实例上调用call方法，它会调用该属性的getter。但是属性接口提供了一个更好的获取属性值的方式：get方法。
+
+顶层属性表示为KProperty0接口的实例，它有一个无参数的get方法：
+
+```
+val counter = 0;
+val kProperty = ::counter
+kProperty.setter.call(21)
+kProperty.get() ----------> 21
+```
+
+一个成员属性由KProperty1的实例表示，它拥有一个单参数的get方法。要访问该属性的值，*必须提供需要的值所属的那个对象实例*。
+
+```
+class Person(val name: String, val age: Int)
+
+val person = Person("Alice",20)
+val memberProperty = Person::age
+memberProperty.get(person) --------> 20
+```
+
+只能使用反射访问定义在最外层或者类中的属性，而不能访问函数的局部变量。
+
+所有的声明都能被注解，所以代表运行时声明的接口：KClass，KFunction和KParameter，全部继承了KAnnotatedElement。KClass既可以用来表示类也可以表示对象。KProperty可以表示任何属性，而它的子类KMutabalProperty表示一个用var声明的可变属性。可以使用声明在KProperty和KMutableProperty中的特殊接口Getter和Setter，把属性的访问器当成函数使用。
+
+### 用反射实现对象序列化
+
+serialize函数接收一个对象然后返回JSON表示法的字符串。它通过一个StringBuilder实例来构建JSON结果。
+
+```
+private fun StringBuilder.serializeObject(x: Any) {
+    append(...)
+}
+```
+
+serializeObject没有扩展StringBuilder的API。它执行的操作在这个特殊的上下文之外毫无意义，所以被标记成private，以保证它不会在其他地方使用。
+
+```
+fun serialize(obj: Any): String = buildString {serializeObject(obj)}
+```
+
+serialize函数把所有的工作委托给了serializeObject。buildString会创建一个StringBuilder，并在Lambda中填充它的内容。
+
+默认情况下，序列化函数将序列化对象的所有属性：基本数据类型和字符串将会被酌情序列化成JSON数值，布尔值和字符串，集合将会被序列化成JSON数组，其他类型的属性将会被序列化成嵌套的对象。
+
+```
+private fun StringBuilder.serilizeObject(obj: Any) {
+    val kClass = obj.javaClass.kotlin
+    val properties = kClass.memberProperties
+
+    properties.joinToStringBuilder(this, perfix = "{", postfix = "}") {
+        prop - > 
+            serializeString(prop.name)
+            append(":")
+            serializePropertyValue(prop.get(obj))
+    }
+}
+```
+
+### 用注解定制序列化
+
+从@JsonExclude开始，这个注解允许你在序列化的时候排除某些属性。修改serializeObject函数的实现来支持它。
+
+KAnnotatedElement接口定义了属性annotations，它是由应用到源码中元素上的所有注解（具有运行时保留期）的实例组成的集合。可以用property.annotations这样的写法来访问一个属性的所有注解。
+
+但这里的过滤并不会用到所有的注解，它只需要找到那个特定的注解（@JsonExclude）。辅助函数findAnnotation完成这项工作：
+
+```
+inline fun <reified T> KAnnotatedElement.findAnnotation() : T?
+    = annotations.filterIsInstance<T>().fitstOrNull()
+```
+
+findAnnotation函数将返回一个注解，其类型就是指定为类型实参的类型。
+
+可以把findAnnotation和标准库函数filter一起使用，过滤掉那些带@JsonExcluede注解的属性：
+
+```
+val properties = kClass.memberProperties.filter {it.findAnnotation<JsonExclude>() == null}
+```
+
+下一个注解时@JsonName：
+
+```
+annotation class JsonName(val name: String)
+
+data class Person (@JsonName("alias") val firstName: String, val age: Int)
+```
+
+这时，关心的不仅是注解存不存在，还要关心它的实参：被注解的属性在JSON中应该用的名称。
+
+```
+val jsonName = prop.findAnnotation<JsonName>()
+val propName = jsonName?.name ?: prop.name
+```
+
+```
+// 使用属性过滤序列化对象
+private fun StringBuilder.serializeObject(obj: Any) {
+    obj.javaClass.kotlin.memberProperties
+            .filter {it.findAnnotation<JsonExclude>() == null}
+            .joinToStringBuilder(this, prefix = "{", postfix = "}") {
+                serializeProperty(it,obj)
+            }
+}
+
+// 序列化单个属性
+private fun StringBuilder.serializePropterty(prop: KProperty1<Any, *>, obj: Any) {
+    val jsonNameAnn = prop.findAnnotation<JsonName>()
+    val propName = jsonNameAnn?.name ?: prop.name
+    serializeString(propName)
+    append(":")
+    serializeProptertyValue(prop.get(obj))
+}
+```
+
+第一步把@JsonExclude注解的属性过滤掉。第二步属性的名称根据@JsonName注解进行处理。
+
+下面讨论@CustomSerializer注解的处理：
+
+```
+// 取回属性值的序列化器
+fun KPProperty<*>.getSerializer(): ValueSerializer<Any?>? {
+    val customSerializerAnn = finAnnotation<CustomSerializer>() ?: return null
+    val serializerClass = customSerializerAnn.serializerClass
+
+    val valueSerializer = serializerClass.objectInstance ?: serializerClass.createInstance()
+
+    return valueSerializer as ValueSerializer<Any?>
+}
+```
+
+它是KProperty的扩展函数，因为属性是这个方法要处理的主要对象。处理作为@CustomSerializer注解的值的类和对象（Kotlin的单例）的方式，比较重要。它们都用KClass类表示，不同的是，对象拥有非控制的objectInstance属性，可以用它来访问为object创建的单例实例。普通的类，可以通过调用createInstance来创建一个新的实例。这个函数和java.lang.Class.newInstance类似。
+
+```
+private fun StringBuilder.serizlizeProperty(prop: KProperty1<Any, *>, obj: Any) {
+    val name = prop.finAnnotation<JsonName>()?.name ?: prop.name
+    serializeString(name)
+    append(":")
+
+    val value = prop.get(obj)
+    val jsonValue = prop.getSerializer()?.toJsonValue(value) ?: value
+
+    serializePropertyValue(jsonValue)
+}
+```
+
+### JSON解析和对象反序列化
+
+把要被反序列化的对象的类型作为实化类型参数传给deserialize函数并拿回一个新的对象实例。
+
+JSON反序列化是比序列化更困难的任务，因为它涉及解析JSON字符串的输入，还有使用反射访问对象的内部细节。JKid中的JSON反序列化器使用相当普通的方式实现，由三个主要阶段组成：词法分析器（通常被称为lexer），语法分析器或解析器以及反序列化组件本身。
+
+* 词法分析：把由字符组成的输入字符串切分成一个由标记组成的列表。有两类标记：代表JSON语法中具有特殊意义的字符（逗号，冒号，花括号和方括号）的字符标记；对应到字符串，数字，布尔值以及null常量的值标记。
+* 解析器：负责将无格式的标记列表转换为结构化的表示法。在JKid中的任务是理解JSON的更高级别的结构，并将各个标记转换为JSON中支持的语义元素：键值对，对象和数组。
+    
+JsonObject接口跟踪当前正在被反序列化的对象或数组。解析器在发现当前对象的新属性时调用相应的方法。
+
+```
+interface JsonObject {
+    fun setSimpleProperty(propertyName: String, value: Any?)
+
+    fun createObject(propertyName: String): JsonObject
+
+    fun createArray(propertyName: String): JsonObject
+}
+```
+
+propertyName接收到了JSON键。因此，当解析器遇到一个使用对象作为值的author属性时，createObject("author")方法会被调用。JSONObject实现负责创建属性的新对象，并在外部对象中存储对它们的引用。
+
+```
+{"title":"Catch-22","author":{"name":"J.Heller"}}
+        |  词法分析器：把JSON分成标记
+{ “titile" : "Catch-22" , "author" : { "name" : "J.Heller" } }
+        | 解释器：处理不同的语义元素
+o1.setSimpleProperty("title","Catch-22")
+val o2 = o1.createObject("author")
+o2.setSimpleProperty("name","J.Heller")
+        | 反序列化器：创建并返回需要的类的实例
+Book("Catch-22",Author("J.Heller"))
+```
+
+* 反序列化器为JsonObject提供一种实现，逐步构建相应的新实例。它需要找到类属性和JSON键之间的对应关系，并构建嵌套对象的值。之后，它才可以创建一个最终需要的类的新实例。
+
+JKid库打算使用数据类，因此，它将从JSON文件加载的所有名称-值的配对作为参数传递给要被反序列化的类的构造方法。它不支持在对象实例创建后设置其属性。这意味着从JSON中读取数据时它需要将数据存储在某处，然后才能构建该对象。
+
+在JSON中，需要构建不同类型的复合结构：对象，集合和map。ObjectSeed，ObjectListSeed和ValueListSeed类负责构建适当的对象，复合对象列表，以及简单值的列表。
+
+基本的Seed接口继承了JsonObject，并在构建过程完成后提供了一个额外的spawn方法来获取生成的实例。
+
+```
+interface Seed : JsonObject {
+    fun spawn() : Any?
+
+    fun createCompositeProperty(propertyName: String, isList: Boolean): JsonObject
+
+    override fun createObject(propertyName: String) = createCompositeProperty(propertyName, false)
+
+    override fun createArray(propertyName: String) = createCompositeProperty(propertyName, true)
+
+    // ...
+}
+```
+
+spawn就是返回结果值的build方法的翻版。它返回的是为ObjectSeed构造的对象，以及为ObjectListSeed或ValueListSeed生成的列表。
+
+不讨论列表是如何反序列化的，集中于创建对象，它更复杂并有助于展示通用的思路。
+
+```
+// 顶层反序列化函数
+fun <T: Any> deserialize(json: Reader, targetClass: KClass<T>) : T {
+    val seed = ObjectSeed(targetClass, ClassInfoCache())
+    Parser(json, seed).parse()
+    return seed.spawn()
+}
+```
+
+创建一个ObjectSeed来存储反序列化对象的属性，然后调用解析器并将输入的字符流json传递给它。当达到输入数据的结尾时，就可以调用spawn函数来构建最终对象。
+
+ObjectSeed接收了一个目标类的引用和一个classInfoCache对象，该对象包含缓存起来的关于该类属性的信息。这些缓存起来的信息被用于创建该类的实例。
+
+```
+// 反序列化一个对象
+class ObjectSeed<out T: Any> (targetClass: KClass<T>
+    , val classInfoCache: ClassInfoCache) : Seed {
+
+    private val classInfo: ClassInfo<T> = classInfoCache[targetClass]
+    private val valueArguments = mutableMapOf<KParameter, Any?>()
+    private val seedArguments = mutableMapOf<KParameter, Seed>()
+
+    // 构建一个从构造方法参数到它们的值的映射
+    private val arguments: Map<KParameter, Any?>
+        get() = valueArguments + seedArguments.mapValues { it.value.spawn()}
+
+    // 若一个构造方法参数的值是简单值，把它记录下来
+    override fun setSimpleProperty(propertyName: String, value: Any?) {
+        val param = classInfo.getConstructorParameter(propertyName)
+        valueArguments[param] = 
+                classInfo.deserializeConstructorArgument(param, value)
+    }
+
+    override fun createCompositeProperty(propertyName: String, isList: Boolean) : Seed {
+        val param = classInfo.getConstructorParameter(propertyName)
+
+        // 若有的话加载属性DeserializeInterface注解的值
+        val deserializeAs = 
+                classInfo.getSeserializeClass(propertyName)
+
+        // 根据形参的类型创建一个ObjectSeed或者CollectionSeed
+        val seed = createSeedForType(deserializeAs ?: param.type.javaType, isList)
+
+        // 记录到seedArguments中
+        return seed.apply {seedArguments[param] = this}
+    }
+
+    // 传递实参map，创建targetClass实例作为结果
+    override fun spawn() : T = 
+                classInfo.createInstance(arguments)
+
+}
+```
+
+ObjectSeed构建了一个构造方法形参和它们的值之间的映射。用了两个可变的map：给简单值用的valueArguents和给复合属性用的seedArguments。当结果开始创建时，新的实参通过setSimpleProperty调用被添加到valueArguments，通过createCompositeProperty调用被添加到seedArguments。新的复合种子被添加时状态是空的，然后被来自输入流的数据填充。最终，spawn方法递归地调用每个种子的spwan方法来构建所有嵌套的种子。
+
+### 反序列化的最后一步：callBy()和使用反射创建对象
+
+ClassInfo类，它创建了作为结果的实例，还缓存了关于构造方法参数的信息。
+
+KCallable.call方法，调用函数或者构造方法，并接收一个实参组成的列表。这个方法很多情况下都好用，但它有一个限制：不支持默认参数值。若用户试图用带默认参数值的构造方法来反序列化一个对象，绝对不想这些实参还需要在JSON中说明。因此，需要使用另外一个支持默认参数值的方法：KCallable.callBy。
+
+```
+interface KCallable<out R> {
+    fun callBy(args: Map<KParameter, Any?>) : R
+}
+```
+
+这个方法接收一个形参和它们对应值之间的map，这个map将被作为参数传给这个方法。若map中缺少了一个形参，可行的话它的默认值将会被使用。*你不必按照顺序来写入形参：可以从JSON中读取名称-值的配对，找到每个实参名称对应的形参，把它的值写入map中*。
+
+args map中的值的类型需要跟构造方法的参数类型想匹配，否则将得到一个IllegalArgumentException。这对算术类型来说特别重要：需要知道参数接收的是一个Int，一个Double，一个Long，还是其他的基本数据类型，并把来着JSON的算术值转换成正确的类型。
+
+```
+// 根据值类型取得序列化器
+fun serializerForType(type: Type) : Valueserializer<out Any?>? = 
+    when(type) {
+        Byte::class.java -> ByteSerializer
+        Int::class.java -> IntSerializer
+        Boolean::class.java -> BooleanSerializer
+        // ...
+        else -> null
+    }
+```
+
+对应的ValueSerializer实现会执行必要的类型检查以及转换：
+
+```
+object BooleanSerializer : ValueSerializer<Boolean> {
+    override fun fromJsonValue(jsonValue: Any?) : Boolean {
+        if(jsonValue !is Boolean) throw JKidException("Boolean expected")
+        return jsonValue
+    }
+
+    override fun toJsonValue(value: Boolean) = value
+}
+```
+
+callBy方法调用一个对象的主构造方法，需要传给它一个形参和对应值之间的map。ValueSerializer机制保证了map中的值拥有正确的类型。
+
+ClassInfoCache旨在减少反射操作的开销。控制序列化和反序列化过程的注解，它们是用在了属性上，而不是形参上。当你反序列化一个对象时，你打交道的是构造方法参数，而不是属性：要获取注解，需要先找到对象的属性。在读取每个JSON键值对的时候都执行一次这样的搜索将会极其缓慢，所以每个类只会做一次这样的搜索并且把信息缓存起来。
+
+```
+class ClassInfoCache {
+    private val cacheData = mutableMapOf<KClass<*>, ClassInfo<*>>()
+
+    operator fun <T : Any> get(cls: KClass<*>) : ClassInfo<T> = 
+            cacheData.getOrPut(cls) {ClassInfo(cls)} as ClassInfo<T>
+}
+```
+
+在map中存储值的时候去掉类型信息，但get方法实现了保证返回的ClassInfo<T>拥有正确的类型实现。
+
+```
+// 构造方法的参数以及注解数据的缓存
+class ClassInfo<T: Any>(cls: KClass<T>) {
+    private val constructor = cls.primaryConstructor!!
+
+    private val jsonNameToParamMap = hashMapOf<String, KParameter>()
+    private val paramToSerializerMap = 
+            hashMapOf<KParameter, ValueSerializer<out Any?>>()
+
+    private val jsonNameToDeserializeClassMap = 
+            hashMapOf<String, Class<out Any>?>()
+
+    init {
+        constructor.parameters.forEach {cacheDataForParameter(cls, it)}
+    }
+
+    fun getConstructorParameter(propertyName: String) : KParameter = 
+            jsonNameToParam[propertyName]!!
+
+    fun deserializeConstructorArgument(param: KParameterm, value: Any?) : Any? {
+        val serializer = paramToSerializer[param]
+
+        if(serializer != null) return seralizer.fromJsonValue(value)
+
+        validateArgumentType(param, value)
+
+        return value
+    }
+
+    fun createInstance(arguments: Map<KParameter, Any?>) : T {
+        ensureAllParametersPresent(arguments)
+        return constructor.callBy(arguments)
+    }
+    // ...
+}
+```
+
+初始化时，找到了每个构造方法参数对应的属性并取回了它们的注解。这些数据存储在三个map中：jsonNameToParameterMap说明了JSON文件中的每个键对应的形参，paramToSerializerMap存储了每个形参对应的序列化器，jsonNameToDeserializeClassMap存储了指定为@DeserializeInterface注解的实参的类。
+
+```
+// 验证需要的参数被提供了
+private fun ensureAllParametersPresent(arguments: Map<KParameter, Any?>) {
+    for(param in constructor.parameters) {
+        if(arguments[param] == null &&
+                !param.isOptional && !param.type.isMarkedNullable) {
+                    throw JKidException("Missing value for parameter ${param.name}")
+                }
+    }
+}
+```
+
+这个函数检查你是不是提供了全部需要的参数的值。若一个参数有默认值，那么param.isOptional是true，就可以为它省略一个实参；反之，默认值就会被使用。
+
+## 总结
+
+* Kotlin中应用注解的语法和Java几乎一模一样。
+
+* 在Kotlin中可以让你应用注解的目标的范围比Java更广，其中包括了文件和表达式。
+
+* 一个注解的参数可以是一个基本数据类型，一个字符串，一个枚举，一个类引用，一个其他注解类的实例，或者前面这些元素组成的数组。
+
+* 若单个Kotlin声明产生了多个字节码元素，像@get:Rule这样指定一个注解的使用点目标，允许选择注解如何应用。
+
+* 注解类的声明时这样的，它是一个拥有主构造方法且没有类主体的类，其构造方法中所有参数都被标记成了val属性。
+
+* 元注解可以用来指定（使用点）目标，保留期模式和其他注解的特性。
+
+* 反射API让你在运行时动态地列举和访问一个对象的方法和属性。它拥有许多接口来表示不同种类的声明。
+
+* 要获取一个KClass的实例，若类是静态已知的，可以使用ClassName::class；否则，使用obj.javaClass.kotlin从对象实例上取得类。
+
+* KFunction接口和KProperty接口都继承了KCallable，它提供了一个通用的call方法。
+
+* KCallable.callBy方法能用来调用带默认参数值的方法。
+
+* KFunction0，KFunction1等这种不同参数数量的函数可以使用invoke方法调用。
+
+* KProperty0和KProperty1是接收者数量不同的属性，支持用get方法取回值。KMutableProperty0和KMutableProperty1继承了这些接口，支持通过set方法来改变属性的值。

@@ -1,0 +1,775 @@
+# 类，对象和接口
+
+## 定义类继承结构
+
+### Kotlin中的接口
+
+Kotlin的接口与Java 8 相似：它们可以包含抽象方法的定义以及非抽象方法的实现，但它们不能包含任何状态。
+
+使用*interface*关键字而不是class来声明一个Kotlin的接口
+
+```
+interface Clickable {
+    fun click()
+}
+
+// 实现一个简单的接口
+
+class Button : Clickable {
+    override fun click() = println("Button click")
+}
+```
+
+Kotlin在类名后面使用冒号来代替了Java中的extends和implements关键字。和Java一样，一个类可以实现任意多个接口，但是只能继承一个类。
+
+与Java中的@Override注解类似，override修饰符用来标注被重写的父类或者接口的方法和属性。与Java不同的是，在Kotlin中*使用override修饰符是强制要求的*。
+
+接口的方法可以有一个默认实现。需要提供一个方法体。
+
+```
+interface Clickable {
+    fun click()
+    fun showOff() = println("I'm Clickable!")
+}
+```
+
+若实现了这个接口，需要为click提供一个实现。可以重新定义showOff方法的行为，或者如果对默认行为感到满意也可以直接省略它。
+
+```
+// 定义另一个实现了同样方法的接口
+interface Focusable {
+    fun setFocus(b: Boolean) = println("I ${if(b) "got" else "lost"}" focus.)
+    fun showOff() = println("I'm Focusable!")
+}
+```
+
+若你的类实现了这两个接口，每一个都包含了带默认实现的showOff方法：将会使用哪一个呢？*任何一个都不会使用，取而代之的是，若没有显式实现showOff，就会得到编译错误*：
+
+```
+The class 'Button' must 
+override public open fun showOff() because it inherits
+many implementations of it.
+```
+
+```
+class Button : Clickable,Focusable {
+    override fun click() = println("Button click")
+    override fun showOff() {
+        super<Clickable>.showOff()  
+        super<Focusable>.showOff() //使用尖括号加上父类型名字的“super”表明了想要调用哪一个父类的方法。
+    }
+}
+```
+
+在Java中可以把基类的名字放在super关键字的前面：Clickable.super.showOff()，在Kotlin中需要把基类的名字放在尖括号中：super<Clickable>.showOff()。
+
+### open,final和abstract修饰符：默认为final
+
+Java允许创建任意类的子类并重写任意方法，除非显式地使用了final关键字标注。
+
+但是这样会造成一些问题：对基类进行修改会导致子类不正确的行为，这就是*脆弱的基类问题*，因为基类代码的修改不再符合在其子类中的假设。
+
+Java的类和方法默认是open的，而Kotlin中默认都是final的。（即禁止继承和重写）
+
+若要允许创建一个类的子类，需要使用open修饰符来标示这个类。需要给每一个可以被重写的属性或方法添加open修饰符。
+
+```
+open class RichButton : Clickable { // 类是open的，其他类可以继承
+
+    fun disable(){}  // 这个函数时final的：子类不能覆写
+
+    open fun animate(){} // 这个函数是open的：子类可以覆写
+
+    override fun click(){} // 这个函数重写了一个open函数且本身同样是open的
+}
+```
+
+覆写了一个基类或者接口的成员，重写了的成员同样默认是open的。若要改变，阻止子类覆写，可以显式地将覆写成员标注为final。
+
+在Kotlin中，同Java一样，可以将一个类声明为abstract的，这种类不能被实例化。抽象类中的抽象成员始终是open的，所以不需要显式的使用open修饰符。
+
+```
+abstract class Animated {       // 这个类是抽象的：不能创建它的实例
+
+    abstract fun animate()      // 这个函数是抽象的，必须被子类覆写
+
+    open fun stopAnimate() { }  // 抽象类中的非抽象函数并不是默认open的，但可以标注open
+
+    fun animateTwice() { }
+
+}
+```
+
+*注意：在接口中，不能使用final，open或者abstract。接口中的成员始终是open的，不能将其声明为final的。若没有函数体就是abstract的，但是这个关键字并不是必需的。*
+
+### 可见性修饰符：默认为public
+
+Kotlin中的可见性修饰符与Java中的类似，（public，private，protected）但是默认的可见性不一样：Kotlin中，省略了修饰符，声明就是*public*的。
+
+Java中的默认可见性-包私有，在Kotlin中并没有使用。替代方案，Kotlin提供了一个新的修饰符-*internal*，表示”只在模块内部可见“。一个模块就是一组一起编译的Kotlin文件。
+
+internal可见性的优势在于*它提供了对模块实现细节的真正封装*。使用Java是，这种封装很容易被破坏。因为外部代码可以将类定义到与你代码相同的包中，从而得到访问你的包私有声明的权限。
+
+Kotlin*允许在顶层声明中使用private可见性，包括类，函数和属性。*这些声明就会只在声明它们的文件中可见。
+
+|修饰符| 类成员| 顶层声明|
+|------|------|-------|
+|public(默认)| 所有地方可见| 所有地方可见|
+|internal|模块中可见|模块中可见|
+|protected|子类中可见|—|
+|private|类中可见|文件中可见|
+
+类的基础类型和类型参数列表中用到的所有类，或者函数的签名都有与这个类或者函数本身相同的可见性。
+
+protected修饰符在Java和Kotlin中不同的行为：*Java中，可以从同一个包中访问一个protected的成员，但是Kotlin不允许这样做。protected成员只在类和它的子类中可见。*
+
+*注意：扩展函数不能访问它的private和protected成员。*
+
+另一个Kotlin与Java之间可见性规则的区别：在Kotlin中一个外部类不能看到其内部（或者嵌套）类中的private成员。
+
+### 内部类和嵌套类：默认都是嵌套类
+
+在Kotlin中可以在另一个类中声明一个类，但是Kotlin的嵌套类不能访问外部类的实例。
+
+Kotlin中没有显式修饰符的嵌套类与Java中的static嵌套类是一样的。要把它变成一个内部类来持有一个外部类的引用的话，需要使用*inner修饰符*。
+
+在Kotlin中引用外部类实例的语法也与Java不同。需要使用this@Outer从Inner类去访问Outer类
+
+```
+class Outer {
+    inner class Inner {
+        fun getOuterReference(): Outer = this@Outer
+    }
+}
+```
+
+### 密封类：定义受限的类继承结构
+
+创建一个包含有限数量的类的继承结构。
+
+```
+interface Expr
+class Num(val value: Int) : Expr
+class Sum(val left: Expr,val right: Expr) : Expr
+
+fun eval(e: Expr): Int = 
+    when(e) {
+
+        is Num -> e.value
+        is Sum -> eval(e.right) + eval(e.left)
+        else -> throw IllegalArgumentException("Unknown expression")
+    }
+```
+
+父类Expr有两个子类，在when表达式中处理所有可能的子类固然很方便，但是必须提供一个else分支来处理没有任何其他分支能匹配的情况。
+
+总是不得不添加一个默认分支很不方便，而且，若添加了一个新的子类，编译器并不能发现有地方改变了，若忘记添加一个新分支，就会选择默认的选项，会导致潜在的bug。
+
+Kotlin为这个问题提供了解决方案：*sealed类*。为父类添加一个sealed修饰符，对可能创建的子类做出严格的限制。*所有的直接子类必须嵌套在父类中。*
+
+```
+sealed class Expr {
+    class Num(val value: Int) : Expr()
+    class Sum(val left: Expr,val right: Expr) : Expr()
+}
+
+fun eval(e: Expr): Int = 
+    when(e) {
+        is Expr.Num -> e.value;
+        is Expr.Sum -> eval(e.left) + eval(e.right)
+    }
+```
+
+在when表达式中处理所有sealed类的子类，就不再需要提供默认的分支。
+
+*注意：sealed修饰符隐含的这个类是一个open类，不再需要显式地添加open修饰符。密封类不能在类外部拥有子类。*
+
+在when中使用sealed类并且添加一个新的子类的时候，有返回值的when表达式会导致编译失败，它会告诉你哪里的代码必须要修改。
+
+
+## 声明一个带非默认构造方法或属性的类
+
+在Java中一个类可以声明一个或多个构造方法。Kotlin也是类似的，只是做出了一点修改：*主构造方法*（通常是主要而简洁的初始化类的方法，并且在类体外部声明）和*从构造方法*（在类体内部声明）。同样允许在*初始化语句块*中添加额外的初始化逻辑。
+
+### 初始化类：主构造方法和初始化语句块
+
+```
+// 声明一个简单类
+class User(val name: String)
+```
+
+通常讲，类的所有声明都在花括号中，但是这个类没有花括号只是包含了声明在括号中。
+
+*被括号围起来的语句块*就叫做*主构造方法*。它有两个目的：表明构造方法的参数以及定义使用这些参数初始化的属性。
+
+```
+class User constructor(name: String) { // 带一个参数的主构造方法
+    val name: String
+    init {                   // 初始化语句块
+        this.name = name;
+    }
+}
+```
+
+*constructor*关键字用来开始一个主构造方法或者从构造方法的声明。*init*关键字用来引入一个初始化语句块。这种语句块包含了在类被创建时执行的代码，并会与主构造方法一起使用。
+
+因为主构造方法有语法限制，不能包含初始化代码，所以要使用初始化语句块。
+
+上面的例子中，不需要吧初始化代码放在初始化语句块中，因为它可以与name属性的声明结合。若主构造方法没有注解或可见性修饰符，同样可以去掉constructor关键字：
+
+```
+class User(name: String) {
+    val nickName = name;
+}
+```
+
+若属性用相应的构造方法参数来初始化，代码可以通过把val关键字加载参数前的方式来进行简化。可以替换类中的属性定义：
+
+```
+class User(val name: String)
+```
+
+可以像函数参数一样，为构造方法参数声明一个默认值：
+
+```
+class User(val name: String, val isSubscribed: Boolean = true)
+```
+
+要创建一个类的实例，只需要直接调用构造方法，*不需要new关键字*：
+
+```
+val alice = User("Alice")
+val bob = User("Bob",false)
+```
+
+若一个类具有一个父类，主构造方法同样需要初始化父类。可以通过在*基类列表的父类引用中提供父类构造方法参数的方式*做到：
+
+```
+open class User(val name: String) {...}
+
+class EmailUser(val name: String) : User(name) {...}
+```
+
+若一个类没有声明任何的构造方法，将会生成一个不作任何事情的默认构造方法。若继承了这种类并且没有提供任何的构造方法，必须显式地调用父类的构造方法，即使它没有任何参数：
+
+```
+open class Button {...}
+class RadioButton : Button() {...}
+```
+
+接口没有构造方法，所以在实现一个接口的时候，不需要在父类型列表中它的名称后面再加上括号！
+
+若想确保你的类不被其他代码实例化，必须把构造方法标记为private：
+
+```
+class Secretive private consctrutor() {...} // 主构造方法标记为private
+```
+
+在大多数真实的场景中，类的构造方法是非常简明的：*它要么没有参数或者直接把参数与对应的属性关联。*
+
+### 用不同的方式来初始化父类
+
+*不要声明多个从构造方法用来重载和提供参数的默认值*。取而代之的是，应该直接表明默认值。
+
+```
+open class View {
+    constructor(context: Context) {
+        ...
+    }
+    constructor(context: Context, attr: AttributeSet) {
+        ...
+    }
+}
+```
+
+这个类没有声明一个主构造方法，但是声明了两个从构造方法。*从构造方法使用constructor关键字引出*。只要需要，可以声明任意多个从构造方法。
+
+```
+class Button : View {
+    constructor(context: Context) : super(context) {
+        ...
+    }
+    constructor(context: Context, attr: AttributeSet) : super(context,attr) {
+        ...
+    }
+}
+```
+
+继承View，可以声明同样的构造方法，并且使用*super()*关键字调用对应的父类构造方法。
+
+就像Java一样，也可以使用*this()*关键字，从一个构造方法中调用你自己的类的另一个构造方法
+
+```
+class Button : View {
+    constructor(context: Context) : this(context,MY_STYLE) {...}
+    constructor(context: Context, attr: AttributeSet) {
+        ...
+    }
+}
+```
+
+若类没有主构造方法，那么每个从构造方法*必须初始化基类或者委托给另一个这么做了的构造方法*。
+
+### 实现在接口中声明的属性
+
+在Kotlin中，接口可以包含抽象属性声明。
+
+```
+interface User {
+    val name: String
+}
+```
+
+这意味着实现User接口的类需要提供一个取得name值的方式。接口没有说明这个值应该存储到一个支持字段韩式通过getter来获取。接口本身并不包含任何状态，因此只有实现这个接口的类在需要的情况下会存储这个值。
+
+```
+// 实现一个接口的属性
+
+class PrivateUser(override val name: String) : User
+calss SubscribingUser(val email: String) : User {
+    override val name: String
+        get() = emial.substringBefore('@')
+}
+class FacebookUser(val accountId: Int) : User {
+    override val name = getFacebookName(accountId)
+}
+```
+
+对于PrivateUser来说，使用了简介的语法直接在主构造方法中声明了一个属性。这个属性实现了来自User的抽象属性，所以将其标记为override。
+
+对于SubscribingUser来说，name属性通过一个自定义getter实现。这个属性没有一个支持字段来存储它的值，只有一个getter在每次调用的时候从email中得到。
+
+对于FacebookUser来说，在初始化时将name属性与值关联。name在SubscribingUser和FacebookUser中的不同实现，在SubscribingUser中属性有一个自定义getter在每次访问时计算，在FacebookUser中属性有一个支持字段来存储在类初始化时计算得到的数据。
+
+除了抽象属性声明外，接口还可以包含具有getter和setter的属性，只要它们没有引用一个支持字段。(支持字段需要在接口中存储状态，而这是不允许的)
+
+```
+interface User {
+    val email: String
+    val name: String
+        get() = email.substringBefore('@')
+}
+```
+
+### 通过getter或setter访问支持字段
+
+存储值的属性和具有自定义访问器在每次访问时计算值的属性。结合这两种来实现一个既可以存储值又可以在值被访问和修改时提供额外逻辑的属性。
+
+```
+// 在setter中访问支持字段
+class User(val name: String) {
+    var address: String = "unspecified"
+        set(value: String) {
+            println("Address was changed")
+            field = value;
+        }
+}
+```
+
+像平常通过使用user.address = "new value"来修改一个属性的值，其实在底层调用了setter。
+
+使用特殊的标识符*field*来访问支持字段的值。
+
+*注意：可以只重定义可变属性的一个访问器。*
+
+### 修改访问器的可见性
+
+可以通过在get和set关键字前放置可见性修饰符的方式来修改它：
+
+```
+class User(val name: String) {
+    var address: String = "unspacified"
+        private set        // 不能在类外部修改这个属性，但是可以使用getter
+
+    fun changeAddress(value: String) {
+        this.address = value;
+    }
+}
+```
+
+## 编译器生成的方法：数据类和类委托
+
+Java平台定义了一些需要在许多类中呈现的方法，并且通常以一种很机械的方式实现，比如equals，hashCode，toString。Java IDE可以将这些方法生成自动化，所以通常不需要手动书写。
+
+Kotlin编译器*能将这些呆板的代码生成放到幕后，并不会因为自动生成的结果导致源代码文件变得混乱*。
+
+### 通用对象方法
+
+#### 字符串表示：toString()
+
+Kotlin中的所有类同Java一样，提供了一种方式类获取类对象的字符串表示形式。
+
+```
+// 重写toString方法
+class Client(val name: String, val postalCode: Int) {
+    override fun toString() = "Client(name=$name,postalCode=$postalCode)"
+}
+
+val client = Client("Alice",123456)
+println(client) --------> Client(name=Alice,postalCode=123456)
+```
+
+#### 对象相等性：equals()
+
+== 表示相等性。
+
+* Java中
+    - 若应用到基本数据类型上，比较的是值。
+    - 若在引用类型上，比较的是引用。 
+    
+* Kotlin中
+    - == 运算符是比较两个对象的默认方式：本质上就是通过调用equals来比较两个值的。
+    - === 运算符与Java中的==比较对象引用的效果一模一样。
+
+```
+// 实现equals()
+class Client(val name: String, val postalCode: Int) {
+    override fun equals(other: Any?): Boolean = {
+        if(other == null || other !is Client) 
+            return false
+
+        return name == other.name &&
+               postalCode == other.postalCode
+    }
+}
+```
+
+Kotlin中，*is检查*是Java中instanceof的模拟，用来检查一个值是否为一个指定的类型。!is运算符表示is检查的非运算。
+
+#### Hash容器：hashCode()
+
+hashCode方法通常与equals方法一起被重写。
+
+我们创建有一个元素的Set：一个名为Alice的客户。接着创建一个新的包含相同数据的Client实例并检查它是否包含在Set中。我们期望返回true，因为这两个实例是相等的，但是*事实上返回的是false*：
+
+```
+val processed = hashSetOf(Client("Alice",123456))
+println(processed.contains(Client("Alice",123456))) --------> false
+```
+
+原因就是Client类缺少了hashCode方法。因此它违反了通用的hashCode契约：*若两个对象相等，它们必须有着相同的hash值*
+
+```
+// 实现hashCode()
+class Client(val name: String, val postalCode: Int) {
+    override fun hashCode(): Int = name.hashCode() * 31 + postalCode
+}
+```
+
+现在这个类在所有的情境下都能按照预期来工作了。
+
+### 数据类：自动生成通用方法的实现
+
+上面我们定义一个方便的数据容器，为了能让它按照预期工作，我们写了很多代码。
+
+好消息是：Kotlin编译器能够帮我们自动生成这些方法。为你的类*添加data修饰符*，必要的方法将会自动生成好
+
+```
+data class Client(val name: String, val postalCode: Int)
+```
+
+很简单地就得到了一个重写了所有标准Java方法的类：
+
+* equals用来比较实例
+* hashCode用来作为例如HashMap这种基于哈希容器的键
+* toString用来为类生成按声明顺序排列的所有字段的字符串表达形式
+
+equals和hashCode方法会将所有在主构造方法中声明的属性纳入考虑。*没有在主构造方法中什么的属性将不会加入到相等性检查和哈希值计算中去*
+
+#### 数据类和不可变性：copy()方法
+
+虽然数据类的属性并没有要求是val-同样可以使用var-但*还是强烈推荐只使用只读属性*，让数据类**不可变**。若想使用这样的实例作为HashMap或者类似容器的键，这是*必需的要求*，因为若不这样，用做键的对象在加入容器后被修改，容器可能会进入一种无效的状态。
+
+为了让使用不可变对象的数据类变得更容易，Kotlin编译器为它们多生成了一个方法：*一个允许copy类的实例的方法，并在copy的同时修改某些属性的值*。
+
+创建副本通常是修改实例的好选择：副本有着单独的生命周期而且不会影响代码中引用原始实例的位置。
+
+```
+// 手动实现copy方法
+class Client(val name: String, val postalCode: Int) {
+    fun copy(name: String = this.name,postalCode: Int = this.postalCode) = Client(name,postalCode)
+}
+
+val bob = Client("Bob",123456)
+println(bob.copy(654321)) --------> Client(name=Bob,postalCode=654321)
+```
+
+### 类委托：使用”by“关键字
+
+我们常常需要向其他类添加一些行为，即使它并没有被设计成可扩展。一个常用的实现方式是*装饰器模式*，这种模式的本质就是创建一个新类，实现与原始类一样的接口并将原来的类的实例作为一个字段保存。与原始类拥有同样行为的方法不用修改，只需直接转发到原始类的实例。
+
+这种方法的一个缺点是需要相当多的样板代码。
+
+好消息是Kotlin将*委托*作为一个语言级别的功能做了头等支持。无论什么时候实现一个接口，都可以使用*by关键字*将接口的实现委托到另一个对象。
+
+```
+class DelegatingCollection<T>(val innerList: Collection<T> = ArrayList<T>()) : Collection<T> by innerList {...}
+```
+
+重要的部分是*没有对底层集合的实现方式引入任何的依赖*。
+
+## ”object“关键字：将声明一个类与创建一个实例结合起来
+
+Kotlin中Object关键字在多种情况下出现，但都遵循同样的核心理念:*这个关键字定义一个类并同时创建一个实例*。
+
+* *对象声明*是定义单例的一种方式
+* *伴生对象*可以持有工厂方法和其他与这个类相关，但在调用时并不依赖类实例的方法。它们的成员可以通过类名来访问
+* *对象表达式*用来替代Java的匿名内部类
+
+### 对象声明：创建单例易如反掌
+
+单例模式：定义一个使用private构造方法并且用静态字段来持有这个类仅有的实例。
+
+Kotlin通过使用对象声明功能：将类声明与该类的单一实例声明结合到了一起。
+
+```
+object Paypoll {
+    val allEmployees = arrayListOf<Person>()
+
+    fun calculateSalary() {
+        for(person in allEmployees) {
+            ...
+        }
+    }
+}
+```
+
+对象声明通过object关键字引入。与类一样，对象声明也可以包含属性，方法，初始化语句块等声明。*唯一不允许的就是构造方法（包括主构造方法和从构造方法）*。与普通类的实例不同，对象声明在定义的时候就立即创建了，不需要在代码的其他地方调用构造方法。
+
+对象声明允许你使用对象名加.字符的方式来调用方法和访问属性：
+
+```
+Paypoll.allEmployees.add(Person(...))
+Paypoll.calculateSalary()
+```
+
+对象声明同样可以继承自类和接口：
+
+```
+// 使用对象实现Comparator
+object FileComparator : Comparator<File> {
+    override fun compare(file1: File, file2: File): Int {
+        return file1.path.compareTo(file2.path,ignoreCase = true)
+    }
+}
+```
+
+可以在任何可以使用普通对象的地方使用单例对象：
+
+```
+// 将上面的对象传入一个接收Comparator的函数
+val files = listOf(File("/Z"),File("/A"))
+files.sortedWith(FileComparator)
+```
+
+可以在类中声明对象。这样的对象同样只有一个单一实例；它们在每个容器类的实例中*并不具有不同的实例*。
+
+#### 在Java中使用Kotlin对象
+
+Kotlin中的对象声明被编译成了通过静态字段来持有它的单一实例的类，这个字段名称始终都是INSTANCE。因此要从Java代码使用Kotlin对象，可以通过访问静态的INSTANCE字段：
+
+```
+// Java 
+FileComparator.INSTANCE.compare(file1,file2);
+```
+
+### 伴生对象：工厂方法和静态成员的地盘
+
+Kotlin中的类不能拥有静态成员：Java的static关键字并不是Kotlin语言的一部分。作为替代，Kotlin依赖包级别函数（大多数情形下能够替代Java的静态方法）和对象声明（在其他情况下替代Java的静态方法，同时还包括静态字段）。
+
+在大多情况下，还是推荐使用顶层函数，但是顶层函数不能访问类的private成员。若需要写一个可以在没有类实例的情况下调用但是需要访问类内部的函数，可以将其写成那个类中的对象声明成员。这种函数的一个例子就是*工厂方法*。
+
+在类中定义的对象之一可以使用特殊的关键字来标记：*companion*，这样，就获得了直接通过容器类名称来访问这个对象的方法和属性的能力，不再需要显式地指明对象的名称。
+
+```
+class A {
+    companion object {
+        fun bar() {
+            println("Companion object called")
+        }
+    }
+}
+
+A.bar() --------> Companion object called
+```
+
+*伴生对象*可以访问类中的所有private成员，包括private构造方法，它是实现工厂模式的理想选择。
+
+```
+// 定义一个拥有多个从构造方法的类
+class User {
+    val name: String
+
+    constructor(email: String) {
+        name = email.substringBefore('@')
+    }
+
+    constructor(facebookAccountId: Int) {
+        name = getFacebookName(facebookAccountId)
+    }
+}
+
+// 使用工厂方法来替代从构造方法
+class User private constructor(val name: String) {
+    companion object {
+        fun newSubscribingUser(email: String) = User(email.substringBefore('@'))
+
+        fun newFacebookUser(accountId: Int) = User(getFacebookName(accountId))
+    }
+}
+```
+
+使用工厂方法可以通过类名来调用companion object的方法：
+
+```
+User.newSubscribingUser("123456@qq.com")
+User.newFacebookUser(123)
+```
+
+工厂方法非常有用。可以根据它们的用途来命名，并且能够返回声明这个方法的类的子类。同时还可以在不需要的时候避免创建新的对象。
+
+但是若需要扩展这样的类，使用多个构造方法也许是一个更好的方案，因为*伴生对象成员在子类中不能被重写*。
+
+### 作为普通对象使用的伴生对象
+
+伴生对象是一个声明在类中的普通对象。它*可以有名字，实现一个接口或者有扩展函数或属性*。
+
+```
+// 声明一个命名伴生对象
+class Person(val name: String) {
+    companion object Loader {
+        fun fromJSON(jsonText: String): Person = ...
+    }
+}
+
+person = Person.Loader.fromJSON("")
+person = Person.fromJSON("")
+```
+
+通常，通过包含伴生对象的类的名字来引用伴生对象，所以不必关心它的名字。但是若需要也可以指明。若省略了伴生对象的名字，*默认的名字将会分配为Companion*。
+
+#### 在伴生对象中实现接口
+
+伴生对象也可以实现接口：
+
+```
+interface JSONFactory<T> {
+    fun fromJSON(jsonText: String) : T
+}
+
+class Person(val name: String) {
+    companion object : JSONFactory<Person> {
+        override fun fromJSON(jsonText: String) : Person = ...
+    }
+}
+```
+
+这时有一个函数使用抽象方法来加载实体，可以传给它Person对象：
+
+```
+fun loadFromJSON<T> (factory: JSONFactory<T>) : T {
+    ...
+}
+
+loadFromJSON(Person)   // Person类的名字被当作JSONFactory的实例
+```
+
+类的伴生对象会同样被编译成常规对象：类中的一个引用了它的实例的静态字段。若伴生对象没有命名，在Java代码中它可以通过Companion引用来访问：
+
+```
+// Java 
+Person.Companion.fromJSON("")
+```
+
+若伴生对象有名字，就用这个名字替代Companion。
+
+*Kotlin可以访问在Java类中声明的静态方法和字段，使用与Java相同的语法*。
+
+#### 伴生对象扩展
+
+若类A有一个伴生对象，并且在A.Companion上定义了一个扩展函数funA，可以*通过A.funA()来调用它*。
+
+```
+// 为伴生对象定义一个扩展函数
+class Person(val name: String) {
+    companion object {
+
+    }
+}
+
+fun Person.Companion.fromJSON(jsonText: String) : Person = ...
+
+val person = Person.fromJSON("")
+```
+
+调用fromJSON就好像它是一个伴生对象定义的方法一样，但实际上它是作为扩展函数在类外部定义的。
+
+### 对象表达式：改变写法的匿名内部类
+
+object关键字不仅能用来*声明单例式的对象*，还能用来*声明匿名对象*。匿名对象*替代了Java中的匿名内部类*的用法。
+
+```
+window.addMouseListener {
+    object : MouseAdapter() {     // 声明一个继承MouseAdapter的匿名对象
+
+        override fun mouseClicked(e: MouseEvent) {
+            ...
+        }                                           // 重写MouseAdapter的方法
+
+        override fun mouseEntered(e: MouseEvent) {
+            ...
+        }
+    }
+}
+```
+
+除了去掉了对象的名字，语法是与对象声明相同的。对象表达式声明了一个类并创建了该类的一个实例。
+
+与Java匿名内部类只能扩展一个类或实现一个接口不同：*Kotlin的匿名对象可以实现多个接口或者不实现接口*。
+
+*注意：与对象声明不同，匿名对象不是单例的。每次对象表达式被执行都会创建一个新的对象实例。*
+
+在对象表达式中的代码可以访问创建它的函数中的变量，但与Java不同的是：*访问并没有被限制在final变量，还可以在对象表达式中修改变量的值。*
+
+```
+fun countClicks(window: Window) {
+    var clickCount = 0          // 声明局部变量
+
+    window.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                clickCount++    // 更新变量的值
+            }
+            ...
+        })
+}
+```
+
+## 总结
+
+* Kotlin的接口与Java的相似，但是可以包含默认实现（Java 8 才开始支持）和属性。
+
+* 所有的声明默认都是final和public的。
+
+* 要想是声明不是final的，将其标记为open。
+
+* internal声明在同一模块中可见。
+
+* 嵌套类默认不是内部类。使用inner关键字来声明内部类。
+
+* sealed类的子类只能嵌套在自身的声明中。（Kotlin 1.1 允许将子类放置在同一文件的任意地方）
+
+* 初始化语句块和从构造方法为初始化类实例提供了灵活性。
+
+* 使用field标识符在访问器方法体中引用属性的支持字段。
+
+* 数据类提供了编译器生成的equals,hashCode,toString,copy和其他方法。
+
+* 类委托帮助避免在代码中出现许多相似的委托方法。
+
+* 对象声明是Kotlin中定义单例类的方法。
+
+* 伴生对象（与包级别函数和属性一起）替代了Java静态方法和字段定义。
+
+* 伴生对象与其他对象一样，可以实现接口，也可以拥有扩展函数和属性。
+
+* 对象表达式是Kotlin中针对Java匿名内部类的替代品，并增加了诸如实现多个接口的能力和修改在创建对象的作用域中定义的变量的能力等功能。

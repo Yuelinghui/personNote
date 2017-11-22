@@ -1,0 +1,802 @@
+# Lambda编程
+
+Lambda表达式，简称Lambda，本质上就是*可以传递给其他函数一小段代码*。有了Lambda，可以轻松地把通用的代码结构抽取成库函数，Kotlin标准库就大量地使用了它们。
+
+## Lambda表达式和成员引用
+
+### Lambda简介：作为函数参数的代码块
+
+我们经常使用匿名内部类来实现按钮的点击监听，这种技巧可以工作但是语法太啰嗦。
+
+函数式编程提供了另外一种解决问题的方法：*把函数当作值来对待。可以直接传递函数，而不需要先声明一个类再传递这个类的实例。*
+
+使用Lambda表达式之后，代码会更加简洁，都不需要声明函数了：相反，可以高效地直接传递代码块作为函数参数。
+
+Lambda被当作只有一个方法的匿名对象的替代品只玩，还有另一种经典用途：*和集合一起工作*。
+
+### Lambda和集合
+
+良好的编程风格的主要原则之一是避免代码中的任何重复。我们对集合执行的大部分任务都遵循几个通用的模式，所以实现这几个模式的代码应该放在一个库里。但是没有Lambda的帮助，很难为使用集合提供一个好用方便的库。
+
+比如有一个人的列表，需要找到列表中年龄最大的那个人，若不用Lambda，我们会急忙地手动实现这个搜索功能：
+
+```
+data class Person(val name: String, val age: Int)
+
+fun findTheOldest(people: List<Person>) {
+    var maxAge = 0
+    var theOldest: Person? = null
+
+    for(person in people) {
+        if(person.age > maxAge) {
+            maxAge = person.age
+            theOldest = person
+        }
+    }
+    println(theOldest)
+}
+
+val people = listOf(Person("Alice",26),Person("Bob",30))
+findThOldest(people)    ---------> Person(name=Bob,age=30)
+```
+
+这里代码不少，而且很容易犯错。例如，可能用错了比较，找到了最小的元素。
+
+Kotlin有更好的方法，可以使用库函数：
+
+```
+val people = listOf(Person("Alice",26),Person("Bob",30))
+println(people.maxBy { it.age }) -----------> Person(name=Bob,age=30)
+```
+
+maxBy函数可以在任何集合上调用，且只需要一个实参：一个函数，指定比较哪个值来找到最大元素。
+
+花括号中的代码 {it.age} 就是实现了这个逻辑的Lambda。它接收一个集合中的元素作为实参（使用it引用它）并且返回用来比较的值。
+
+若Lambda刚好是函数或者属性的委托，可以用成员引用替换：
+
+```
+people.maxBy(Person::age)
+```
+
+### Lambda表达式的语法
+
+一个Lambda把一小段行为进行编码，你能把它当作值到处传递。它可以被独立地声明并存储到一个变量中。但更常见的还是直接声明它并传递给函数。
+
+```
+// Lambda表达式的语法
+
+{x: Int, y: Int -> x + y} // 始终在花括号内
+
+|--------------|  |-----|
+        ^            ^
+       参数         函数体
+```
+
+Kotlin的Lambda表达式始终用花括号包围。*注意实参并没有用括号括起来，箭头把实参列表和Lambda的函数体隔开*。
+
+可以把Lambda表达式存储在一个变量中，把这个变量当做普通函数对待（即通过相应实参调用它）：
+
+```
+val sum = {x: Int, y: Int -> x + y}
+println(sum(1,2)) --------> 3
+```
+
+还可以直接调用Lambda表达式：
+
+```
+{println(1)}()
+```
+
+但是这样的语法毫无可读性，也没有什么意义。
+
+上面的maxBy方法，若不用任何简明语法，可以这么写：
+
+```
+people.maxBy({p: Person -> p.age})
+```
+
+花括号中的代码片段是Lambda表达式，把它作为实参传给函数。
+
+但是这段代码有点啰嗦。首先，过多的标点符号破快了可读性。其次，类型可以从上下文推断出来并可以省略。最后，这种情况下不需要给Lambda的参数分配一个名称。
+
+改进这些地方。先拿花括号开刀。Kotlin有这样一种语法约定：*若Lambda表达式是函数调用的最后一个实参，它可以放到括号的外面。*：
+
+```
+people.maxBy(){p: Person -> p.age}
+```
+
+*当Lambda是函数唯一的实参时，可以去掉调用代码中的空括号对*：
+
+```
+people.maxBy{p: Person -> p.age}
+```
+
+当你有多个实参时，既可以把Lambda留在括号内强调它是一个实参，也可以把它放在括号的外面，两种选择都是可行的。
+
+若想传递两个或更多的Lambda，不能把超过一个的Lambda放在外面，这时使用常规语法来传递它们通常是更好的选择。
+
+继续简化语法，移除参数类型：
+
+```
+people.maxBy{p: Person -> p.age} // 显式地写出参数类型
+people.maxBy{p -> p.age} // 推导出参数类型
+```
+
+和局部变量一样，若Lambda参数的类型可以被推导出来，就不需要显式地指定它。
+
+可以遵循这样一条简单的规则：*先不声明类型，等编译器报错后再指定它们*。
+
+可以指定部分实参的类型，而剩下的实参只用名称。若编译器不能推导出其中一种类型，又或者显式的类型可以提升可读性，这种做法或许更方便。
+
+这个例子最后的简化：*使用默认参数名称it替代命名参数*。若当前上下文期待的是只有一个参数的Lambda其这个参数的类型可以推导出来，就会生成这个名称：
+
+```
+people.maxBy{it.age} // it是自动生成的参数名称
+```
+
+*仅在实参名称没有显式地指定时这个默认的名称才会生成*。
+
+若你使用变量存储Lambda，那么久没有可以推断出参数类型的上下文，所以*必须显式地指定参数类型*：
+
+```
+val getAge = {p: Person -> p.age}
+people.maxBy(getAge)
+```
+
+Lambda并没有被限制在单个表达式或语句，它可以包含更多的语句：
+
+```
+val sum = {x: Int, y: Int -> println("Computing the sum of $x and $y :")
+                                x + y}
+```
+
+### 在作用域中访问变量
+
+在函数内部使用Lambda，可以访问这个函数的参数，还有在Lambda之前定义的局部变量：
+
+```
+fun printMessagesWithPrefix(message: Collection<String>,prefix: String) {
+    message.forEach {
+        println($prefix $it)
+    }
+}
+
+val errors = listOf("403 Forbidden","404 Not Found")
+printMessagesWithPrefix(errors,"Error:")
+
+-----> Error: 403 Forbidden
+       Error: 404 Not Found
+```
+
+forEach是最基本的集合操作函数之一：它所做的事就是在集合中的每一个元素上都调用给定的Lambda。
+
+Kotlin和Java的一个显著区别就是：*在Kotlin中不会仅限于访问final变量，在Lambda内部也可以修改这些变量。* ：
+
+```
+fun printProblemCounts(response: Collection<String>) {
+    var clientErrors = 0
+    var serverErrors = 0
+
+    responses.forEach {
+        if(it.startsWith("4")) {
+            clientErrors++
+        } else if(it.startsWith("5")) {
+            serverErros++
+        }
+    }
+
+    println("$clientErrors client errors,$serverErrors server errors")
+}
+
+val response = listOf("200 OK","418 I'm a teapot","500 Internal Server Error")
+printProblemCounts(response)
+------> 1 client errors,1 server errors
+```
+
+Kotlin允许在Lambda内部访问非final变量甚至修改它们。从Lambda内访问外部变量，我们称*这些变量被Lambda捕捉*。
+
+默认情况下，局部变量的声明期被限制在声明这个变量的函数中，但是若它被Lambda捕捉了，使用这个变量的代码可以被存储并稍后再执行。
+
+* 当捕捉final变量时，它的值和使用这个值的Lambda代码一起存储。
+* 当捕捉非final变量时，它的值被封装在一个特殊的包装器中，这样就可以改变这个值，而对这个包装器的引用会和Lambda代码一起存储。
+
+#### 捕捉可变变量：实现细节
+
+Java只允许你捕捉final变量。当想捕捉可变变量的时候，可以使用下面两种技巧：
+* 声明一个单元素的数组，其中存储可变值
+* 创建一个包装类的实例，其中存储要改变的值的引用
+
+```
+// 在Kotlin中实现
+
+class Ref<T>(var value: T) // 模拟捕捉可变变量的类
+val counter = Ref(0)
+val inc = {counter.value++} // 形式上是不可变量被捕捉了，但是存储在字段中的实际值是可以修改的
+```
+
+在实际的代码中，并不需要创建这样的包装器，可以直接修改这个变量：
+
+```
+var count = 0
+val inc = {count++}
+```
+
+第一个列子展示的就是第二个例子背后的原理：
+
+任何时候捕捉了一个final变量（val），它的值被拷贝下来，这和Java一样。而当你捕捉了一个可变变量（var）时，它的值被作为Ref类的一个实例被存储下来。Ref变量是final的能轻易地被捕捉，然而实际值被存储在其字段中，并且可以在Lambda内修改。
+
+若Lambda被用作事件处理器或者用在其他异步执行的情况下，对局部变量的修改只会在Lambda执行的时候发生：
+
+```
+fun countButtonClick(button: Button): Int {
+    var click = 0
+    button.onClick {click++}
+    return click
+}
+```
+
+这个函数始终返回0。尽管onClick处理器可以修改click的值，但并不能观察到值发生变化，因为onClick处理器是在函数返回之后调用的。
+
+### 成员引用
+
+若把函数转换成一个值，你就可以传递它。*使用：：运算符来转换*：
+
+```
+val getAge = Person :: age
+```
+
+这种表达式称为*成员引用*，它提供了简明语法，来创建一个调用单个方法或者访问单个属性的函数值。双冒号把类名与你要引用的成员（一个方法或者一个属性）名称分开。
+
+*注意：不管引用的是函数还是属性，都不要在成员引用的名称后面加括号。*
+
+成员引用和调用该函数的Lambda具有一样的类型，所以可以互换：
+
+```
+people.maxBy(Person :: age)
+```
+
+还可以引用顶层函数：
+
+```
+fun salute() = println("Salute")
+run(:: salute) -------> Salute
+```
+
+这种情况下，省略了类的名称，*直接以::开头*。
+
+若Lambda要委托一个接收多个参数的函数，提供成员引用代替它将会非常方便：
+
+```
+val action = {person: Person,message: String -> sendEmail(person,message)}
+
+val nextAction = :: sendEmail
+```
+
+可以用*构造方法引用*存储或者延期执行创建类实例的动作，构造方法引用的形式是在双冒号后指定类名称：
+
+```
+data class Person(val name: String, val age: Int)
+
+val createPerson = :: Person // 创建Person实例的动作被保存成了值
+val p = createPerson("Alice",29)
+```
+
+还可以用同样的方式引用扩展函数：
+
+```
+fun Person.isAdult() = age >= 21
+val predicate = Person::isAdult
+```
+
+尽管isAdult不是Person类的成员，还是可以通过引用访问它，这和访问实例的成员没什么两样：person.isAdult()
+
+#### 绑定引用
+
+在Kotlin 1.0中，当接收一个类的方法或者属性引用时，始终需要提供一个该类的实例来调用这个引用：
+
+```
+val p = Person("Alice",29)
+val personsAgeFunction = Person::age
+println(personsAgeFunction(p))  ---------->29
+```
+
+Kotlin 1.1计划支持绑定成员引用，它允许使用成员引用语法捕捉特定实例对象上的方法引用：
+
+```
+val dmitrysAgeFunction = p::age
+println(dmitrysAgeFunction()) ----------->29
+```
+
+personsAgeFunction是一个单参数函数（返回给定人的年龄），而dimtrysAgeFunction是一个零参数的函数（返回已经指定好的人的年龄）。
+
+在Kotlin 1.1 之前，需要显示地写出Lambda {p.age}，而不能使用绑定成员引用 p::age。
+
+## 集合的函数式API
+
+函数式编程风格在操作集合时提供了很多优势。大多数任务都可以通过库函数完成，来简化你的代码。
+
+### 基础：filter和map
+
+*filter函数遍历集合并选出应用给定Lambda后会返回true的那些元素。*
+
+```
+val list = listOf(1,2,3,4,5,6)
+println(list.filter{it % 2 == 0})-------> [2,4,6] // 只有偶数留了下来
+```
+
+上面的结果是一个新的集合，它只包含输入集合中那些满足判断式的元素。
+
+*map函数对集合中的每一个元素应用给定的函数并把结果收集到一个新集合。*
+
+```
+val list = listOf(1,2,3,4)
+println(list.map(it * it)) ------> [1,4,9,16] // 所有元素都是之前的平方
+```
+
+上面的结果是一个新的集合，包含的元素个数不变，但是每个元素根据给定的判断式做了变换。
+
+可以轻松地把多个这样的调用链接起来：
+
+```
+// 打印年龄超过30岁的人的名字
+people.fileter {it.age > 30}.map(Person::name)
+```
+
+现在，若需要这个分组中所有年龄最大的人的名字，可以先找到分组中人的最大年龄，然后返回所有这个年龄的人：
+
+```
+peolpe.fileter {it.age == people.maxBy(Person::age).age}
+```
+
+但是请注意：这段代码对每个人都会重复寻找最大年龄的过程，假设集合中有100个人，寻找最大年龄的过程就会执行100遍。
+
+我们做出改进，只计算一次最大年龄：
+
+```
+val maxAge = people.maxBy(Person::age).age
+people.filter{it.age == maxAge}
+```
+
+*若没有必要就不要重复计算！使用Lambda表达式的代码看起来简单，有时候却掩盖了底层操作的复杂性！*
+
+还可以对map应用过滤和变化函数：
+
+```
+val numbers = mapOf(0 to "zreo",1 to "one",2 to "two")
+println(numbers.mapValues{it.value.toUpperCase()})
+
+------> {0=ZEOR,1=ONE,2=TWO}
+```
+
+键和值分别由各自的函数来处理：
+
+* filterKeys和mapKeys过滤和变换map的键
+* filterValues和mapValues过滤和变换对应的值
+
+### "all""any""count"和"find"：对集合应用判断式
+
+先定义一个判断式：canBeInClub27，来检查一个人是否还没到28岁：
+
+```
+val canBeInClub27 = {p: Person -> p.age <= 27}
+```
+
+若对是否所有元素都满足判断式感兴趣，使用*all函数*：
+
+```
+val people = listOf(Person("Alice",27),Person("Bob",31))
+println(people.all(canBeInClub27))  --------------> false
+```
+
+若需要检查集合中是否至少存在一个匹配的元素，那就用*any函数*：
+
+```
+println(people.any(canBeInClub27))  --------------> true
+```
+
+*注意：!all（”不是所有“）加上某个条件，可以用any加上这个条件的取反来替换，反之亦然。*
+
+若想知道有多少个元素满足判断式，使用count：
+
+```
+println(people.count(canBeInClub27)) ------------> 1
+```
+
+count方法容易被遗忘，然后通过过滤集合之后再去大小来实现：
+
+```
+println(people.filter(canBeInClub27).size)
+```
+
+在这种情况下，一个中间集合会被创建并用来存储所有满足判断式的元素。而count只是跟踪匹配元素的数量，不关心元素本身，所以更高效。
+
+找到一个满足判断式的元素，使用*find函数*：
+
+```
+println(people.find(canBeInClub27)) ----------> Person(name=Alice,age=27)
+```
+
+有多个匹配的元素就返回其中第一个元素；或者返回null，即没有一个元素能满足判断式。find还有一个同义方法：*firstOrNull*
+
+### groupBy：把列表转换成分组的map
+
+需要把所有元素按照不同的特征划分为不同的分组，例如把人按年龄分组，相同年龄的人在一组：
+
+```
+println(people.groupBy{it.age}) --------> {27=Person("Alice",27),31=Person("Bob",31)}
+```
+
+这次操作的结果是一个map，是元素分组依据的键（age）和元素分组（person）之间的映射。
+
+每一个分组都是存储在一个列表中，结果的类型是Map<Int,List<Person>>，可以使用向mapKeys和mapValues对这个map做进一步的修改。
+
+### flatMap和flatten：处理嵌套集合中的元素
+
+假设有一堆藏书，使用Book类表示：
+
+```
+data class Book(val title: String, val authors: List<String>)
+```
+
+每本书都可能有一个或者多个作者，可以统计出图书馆中的所有作者的set：
+
+```
+books.flatMap{it.authors}.toSet()
+```
+
+flatMap函数做了两件事：*首先根据作为实参给定的函数对集合中的每个元素做变化（或者说映射），然后把多个列表合并（或者说平铺）成一个列表*。
+
+每一本书可能有多位作者，属性book.authors存储了每本书籍的作者集合。flatMap函数把所有数据的作者合并成一个扁平的列表。toSet调用移除了结果集合中的所有重复元素。
+
+注意：*当不需要做任何变换，只是需要平铺一个集合，可以使用flatten函数*。
+
+## 惰性集合操作：序列
+
+之前看到了许多链式集合函数调用的例子，比如filter和map，这些函数会及早地创建中间集合，也就是说每一步的中间结果都被存储在一个临时列表。*序列*给了执行这些操作的另一种选择：可以避免创建这些临时中间对象。
+
+```
+people.map(Person::age).fileter{it.startsWith('A')}
+```
+
+这样的链式调用会创建两个列表：一个保存map函数的结果，一个保存filter函数的结果。若源列表数据类比较大，链式调用就会变得十分低效。
+
+为了提高效率，可以把操作变成使用*序列*，而不是直接使用集合：
+
+```
+people.asSequence().map(Person::age).filter{it.startsWith('A')}.toList()
+```
+
+这次操作的结果和前面的一样，但是没有创建任何用于存储元素的中间集合，所以元素数量巨大的情况下性能将显著提升。
+
+Kotlin惰性集合操作的入口就是*asSequence*接口。这个接口表示的是一个可以逐个列举元素的元素序列。Sequence只提供了一个方法：*iterator*，用来从序列中获取值。
+
+可以调用扩展函数asSequence()把任意集合转换成序列，调用toList()做反向转换。
+
+### 执行序列操作：中间和末端操作
+
+序列操作分为两类：中间的和末端的。一次*中间操作*返回的是另一个序列，这个新序列知道如何变换原始序列中的元素。一次*末端操作*返回的是一个结果，这个结果可能是集合，元素，数字，或者其他从初始集合的变换序列中获取的任意对象：
+
+```
+sequence.map{...}.flter{...}.toList()
+        |-------------------|--------|
+                ^               ^
+             中间操作          末端操作
+```
+
+中间操作始终都是惰性的。
+
+```
+listOf(1,2,3,4).asSequence()
+    .map{println("map($it)");it*it}
+    .fliter{println("filter($it)");it%2==0}
+```
+
+执行这段代码并不会在控制台上输出任何内容，这意味着map和filter变换被延期了，它们只有在获取结果的时候才会被应用。
+
+末端操作出发执行了所有的延期计算。即末端操作被调用的时候map和filter才会调用。
+
+*注意：使用序列和不使用序列在于计算执行的顺序*：
+
+* 不使用序列，是在每个元素上调用map函数，然后在结果集合上的每个元素再调用filter函数。
+* 使用序列，所有操作是*按照顺序应用在每一个元素上*：处理完第一个元素（先映射再过滤），然后完成第二个元素的处理，以此类推。
+
+使用序列的方法意味着部分元素根本不会发生任何变化，若在轮到它们之前就已经取得了结果：
+
+```
+// 首先把一个数字映射成它的平分，然后找到第一个比数字3大的条目
+listOf(1,2,3).asSequence().map {it * it}.filter{it > 3}
+```
+
+若不使用集合，map的结果首先被求出来，然后中间集合中满足判断式的一个元素会被找出。
+
+对于序列来说，惰性方法意味着你可以跳过处理部分元素：
+
+```
+// 使用序列                         // 不使用序列
+1   2   3   4                       1   2   3   4
+|   |                                      |
+1   4                               1   4   9   16
+|   |                                      |
+1   4                               1   4
+×   √                               ×   √
+```
+
+使用序列不再需要继续检查数字3和4，因为这之前已经找到了结果。
+
+在集合上执行操作的顺序也会影响性能。假设有一个人的集合，打印集合中那些长度小于某个限制的人名。需要做两件事：把每个人映射成它们的名字，然后过滤掉其中那些不够短的名字。这种情况可以用任何顺序应用map和filter操作，结果是一样的，但是执行的变换总次数是不一样的：
+
+```
+val people = listOf(Person("Alice",29),Person("Bob",31)
+                    ,Person("Charles",31),Person("Dan",21))
+
+people.asSequence().map(Person::name).filter{it.length < 4}.toList()
+
+people.asSequence().filter{it.name.length < 4}.map(Person::name).toList()
+
+结果都是：[Bob,Dan]
+
+A   B   C   D                   A   B   C   D
+|   |   |   |    map            |   |   |   |   filter
+A'  B'  C'  D'                      B       D
+|   |   |   |    filter             |       |   map
+    B'      D'                      B'      D'
+```
+
+*先应用filter有助于减少变换的总次数*。若map在前，每个元素都被变换。若filter在前，不合适的元素会被尽早地过滤掉且不会发生变换。
+
+### 创建序列
+
+前面都是使用同一个方法创建序列：在集合上调用asSequence()。另一个是使用*generateSequence函数*。给定序列中的前一个元素，这个函数会计算出下一个元素。
+
+```
+// 生成并使用自然数序列
+val naturalNumbers = generatorSequence(0) {it + 1}
+val numbersTo100 = naturalNumbers.takeWith{ it <= 100}
+println(numbersTo100.sum()) ----->5050   // 当获取结果时，所有被推迟的操作都被执行
+```
+
+另一种常见的用例是父序列。若元素的父元素和它的类型相同，可能会对它所有祖先组成的序列的特质感兴趣。
+
+```
+// 创建并使用父目录的序列
+fun File.isInsideHiddenDirectory() =
+         generateSequence(this) {it.parentFile}.any{it.isHidden}
+val file = File("/Users/kotlin/.HiddenDir/a.txt")
+file.isInsideHiddenDirectory() ----------> true
+```
+
+通过提供第一个元素和获取每个后续元素的方法生成了一个序列。使用序列允许你找到需要的目录之后立即停止遍历父目录。
+
+## 使用Java函数式接口
+
+和Kotlin库一起使用Lambda感觉不错，但是用到的大部分API很有可能是Java写的。好消息是Kotlin的Lambda可以无缝地和Java API互操作。
+
+比如给按钮设置点击监听：
+
+```
+// 在Java 8 之前，需要创建一个匿名类的实例来作为实参传递
+button.setOnClickListener (new OnClickeListener() {
+        @Override
+        public void onClick(View v) {
+            ...
+        }
+    })
+
+// 在Kotlin中，可以传递一个Lambda，代替这个实例
+button.setOnClickListener {view -> ...}
+```
+
+这种方式可以工作的原因是OnClickListener接口只有一个抽象方法。这种接口被称为*函数式接口*，或者*SAM接口*，SAM代表单抽象方法。
+
+Kotlin允许你在调用接收函数式接口作为参数的方法时使用Lambda，来保证你的Kotlin代码既整洁又符合习惯。
+
+*注意：和Java不同，Kotlin拥有完全的函数类型。正因为这样，需要接收Lambda作为参数的Kotlin函数应该使用函数类型而不是函数式接口类型，作为这些参数的类型。*
+
+### 把Lambda当作参数传递给Java方法
+
+可以把Lambda传给任何期望函数式接口的方法。
+
+```
+// Java 
+void postComputation(int delay,Runnable computation)
+
+// Kotlin中调用它并把Lambda作为实参传给它
+postComputation(1000) {println(123)}
+```
+
+*注意：当我们说”一个Runnable的实例“时，指的是”一个实现了Runnable接口的匿名类的实例“。*编译器会帮你创建它，并使用Lambda作为单抽象方法——这个例子中run方法——的方法体。
+
+当你显式地声明对象时，每次调用都会创建一个新的实例。使用Lambda的情况不同：*若Lambda没有访问任何来自定义它的函数的变量，相应的匿名类实例可以在多次调用之间重用*
+
+比如上面的例子，就完全等价于：
+
+```
+val runnable = Runnable {println(123)}
+postComputation(1000,runnable)
+```
+
+若Lambda从包围它的作用域中捕捉了变量，每次调用就不再可能重用同一个实例了。这种情况下，每次调用时编译器都要创建一个新对象，其中存储着被捕捉的变量的值。
+
+```
+fun handleComputation(id: String) {
+    postComputation(1000) {println(id)}
+}
+```
+
+#### Lambda的实现细节
+
+自Kotlin 1.0起，每个Lambda表达式都会被编译成一个匿名类，除非它是一个内联Lambda。
+
+后续版本计划支持生成Java 8 字节码。一旦实现，编译器就可以避免为每一个Lambda表达式都生成一个独立的.class文件。若Lambda捕捉了变量，每个被捕捉的变量会在匿名类中有对应的字段，而且每次（对Lambda的）调用都会创建一个这个匿名类的新实例。否则，一个单例就会被创建。类的名称由Lambda声明所在函数名字称加上后缀衍生出来：
+
+```
+// 反编译之前Lambda表达式的代码
+
+class HandleComputation$1(val id: String) : Runnable {
+    override fun run() {
+        println(id)
+    }
+}
+fun handleComputation(id: String) {
+    postComputation(1000,HandleComputation$1(id))
+}
+```
+
+### SAM构造方法：显式地把Lambda转换成函数式接口
+
+SAM构造方法是编译器生成的函数，让你执行从Lambda到函数式接口实例的显式转换。可以在编译器不会自动应用转换的上下文中使用它。
+
+比如：有一个返回返回的是一个函数式接口的实例，不是直接返回一个Lambda，要用SAM构造方法把它包装起来：
+
+```
+fun createRunnable() : Runnable {
+    return Runnable {println("Runnable")}
+}
+
+createRunnable().run()
+```
+
+SAM构造方法的名称和底层函数式接口的名称一样。SAM构造方法只接收一个参数——一个被用作函数式接口单抽象方法体的Lambda——并返回实现了这个接口的类的一个实例。
+
+SAM构造方法还可以用在需要把从Lambda生成的函数式接口实例存储在一个变量中的情况：
+
+```
+val listener = OnClickListener {view -> val text = when(view.id) {
+        is R.id.button1 -> "FirstButton"
+        is R.id.button2 -> "SecondButton"
+        else -> "Unknown button"
+    }
+    toast(text)
+}
+
+button1.setOnClickListener(listener)
+button2.setOnClickListener(listener)
+```
+
+#### Lambda和添加/移除监听器
+
+注意Lambda内部没有匿名对象那样的this：没有办法引用到Lambda转换成的匿名类的实例。从编译器的角度来看，Lambda是一个代码块，不是一个对象，而且不能把它当作对象引用。Lambda中的this引用只想的是包围它的类。
+
+若你的事件监听器在处理事件时还需要取消自己，不能使用Lambda这样做。这种情况使用实现了接口的匿名对象。
+
+尽管方法调用中的SAM转换一般都自动发生，但是当把Lambda作为参数传给一个重载方法时，也有编译器不能选择正确的重载的情况。这时，使用显式的SAM构造方法是解决编译器错误的好方法。
+
+## 带接收者的Lambda：”with“与”apply“
+
+在Lambda函数体内可以调用一个不同对象的方法，而且无须借助任何额外限定符：这种能力在Java中是找不到的。
+
+### ”with“函数
+
+可以用它对同一个对象执行多次操作，而不需要反复把对象的名称写出来。
+
+```
+// 构建字母表
+fun alphabet(): String {
+    val result = StringBuilder();
+    for(letter in 'A'..'Z') {
+        result.append(letter)
+    }
+    result.append("\nNow I know the alphabet")
+    return result.toString()
+}
+```
+
+上面代码中，调用了result实例上好几个不同的方法，而且每次调用都要重复result这个名称。
+
+```
+// 使用with重写
+fun alphabet(): String {
+    val result = StringBuilder()
+    return with(result) {
+        for(letter in 'A'..'Z') {
+            this.append(letter)
+        }
+        this.append("\nNow I know the alphabet")
+        this.toString()
+    }
+}
+```
+
+with结构实际上是一个接收两个参数的函数：这个例子中的两个参数分别是result和Lambda表达式。
+
+with函数把它的第一个参数转换成作为第二个参数传给它的Lambda的接收者。可以显式地通过this引用来访问这个接收者，也可以省略this引用，不用任何限定符直接方法这个值的方法和属性。
+
+#### 带接收者的Lambda和扩展函数
+
+this指向的是函数接收者。在扩展函数体内部，this指向了这个函数扩展的那个类型的实例，而且也可以被省略掉。
+
+*一个扩展函数某种意义上来说就是带接收者的函数*
+
+|普通函数|普通Lambda|
+|-------|---------|
+|扩展函数|带接收者的Lambda|
+
+Lambda是一种类似普通函数的定义行为的方式。而带接收者的Lambda是类似扩展函数的定义行为的方式。
+
+```
+fun alphabet() = with(StringBuilder()) {
+    for(letter in 'A'..'Z') {
+        append(letter)
+    }
+    append("\nNow I know the alphabet")
+    toString()
+}
+```
+
+这个函数只返回一个表达式，所以使用表达式函数体语法重写了它。可以创建一个新的StringBuilder实例直接当作实参传给这个函数，然后在Lambda中不需要显式的this就可以引用到这个实例。
+
+*with返回的值是执行Lambda代码的结果，该结果就是Lambda中的最后一个表达式（的值）*
+
+### ”apply“函数
+
+apply函数几乎和with函数一模一样，唯一的区别是apply始终会返回作为实参传递给它的对象。
+
+```
+// 使用apply构建字母表
+fun alphabet = StringBuilder().apply {
+    for(letter in 'A'..'Z') {
+        append(letter)
+    }
+    append("\nNow I know the alphabet")
+}.toString()
+```
+
+apply被声明为一个扩展函数。它的接收者变成了作为实参的Lambda的接收者。上面的例子，执行apply的结果是StringBuilder，所以接下来可以调用toString。
+
+许多情况下apply都很有效，其中一种是在创建一个对象实例并需要用正确的方式初始化它的一些属性。在Java中，通常是通过单独的Builder对象来完成的；在Kotlin中，可以在任意对象上使用apply，完全不需要任何来自定义该对象的库的支持：
+
+```
+// 使用apply初始化一个TextView
+fun createTextView(context: Context) = TextView(context).apply{
+    text = "Sample Text"
+    textSize = 20
+    setPadding(10,0,0,0)
+}
+```
+
+apply函数允许使用紧凑的表达式函数体风格。
+
+新的TextView实例创建之后立即被传给了apply。在传给apply的Lambda中，TextView实例变成了（Lambda的）接收者，可以调用它的方法设置属性。Lambda执行之后，apply返回已经初始化过的接收者实例，它变成了createTextView函数的结果。
+
+with函数和apply函数是最基本和最通用的使用带接收者的Lambda的例子。
+
+## 总结
+
+* Lambda允许把代码块当作参数传递给函数。
+
+* Kotlin可以把Lambda放在括号外传递给函数，而且可以用it引用单个的Lambda参数。
+
+* Lambda中的代码可以访问和修改包含这个Lambda调用的函数中的变量。
+
+* 通过在函数名称前加上前缀 ::，可以创建方法，构造方法以及属性的引用，并用这些引用代替Lambda传递给参数。
+
+* 使用像filter，map，all，any等函数，大多数的公共的集合操作不需要手动迭代元素就可以完成。
+
+* 序列允许你合并一个集合上的多次操作，而不需要创建新的集合来保存中间结果。（分析操作过程，通过调整调用函数的顺序来减少操作次数：比如先用filter再用map）
+
+* 可以把Lambda作为实参传给接收Java函数式接口（带单抽象方法的接口，也叫SAM接口）作为形参的方法。
+
+* 带接收者的Lambda是一种特殊的Lambda，可以在这种Lambda中直接访问一个特殊的接收者对象的方法。
+
+* with标准库函数允许调用同一个对象的多个方法，而不需要反复写出这个对象的引用。apply函数让你使用构建者风格的API创建和初始化任何对象。

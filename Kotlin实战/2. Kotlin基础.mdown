@@ -1,0 +1,616 @@
+# Kotlin基础
+
+## 函数和变量
+
+```
+fun main(args : Array<String>) {
+    println("Hello, world!")
+}
+```
+
+* 关键字*fun*用来声明一个函数。
+* 参数的类型写在名称后面。（*args : Array<String\>*），变量的声明也是这样。
+* 数组就是类，Kotlin没有声明数组类型的特殊语法。
+* Kotlin标准库给Java标准库函数提供了许多语法更简洁的封装。（println代替了System.out.println）
+* 和许多其他现代语言一样，*可以省略每行代码结尾的分号*
+
+### 函数
+
+```
+fun max(a : Int,b : Int) : Int {
+    return if(a > b) a else b
+}
+```
+
+函数的声明以关键字*fun*开始，*函数名称*紧随其后，接下来是括号括起来的*参数列表*，参数列表的后面跟着*返回类型*，它们之间用一个*冒号*隔开。
+
+* 在Kotlin中，if是表达式，而不是语句。表达式有值，并且能作为另一个表达式的一部分使用；而语句总是包围着它的代码块中的顶层元素，并且没有自己的返回值。
+* Java中的赋值操作是表达式，在Kotlin中反而变成了语句。
+
+### 表达式函数体
+
+函数体是由单个表达式构成的，可以用这个表达式作为完整的函数体，并*去掉花括号和return语句*
+
+```
+ fun max(a : Int, b : Int) : Int = if(a > b) a else b
+```
+
+若函数体写在花括号里，就说这个函数有*代码块体*，若直接返回了一个表达式，就有*表达式体*
+
+还可以简化max函数，省掉*返回类型*
+
+```
+ fun max(a : Int, b : Int) = if(a > b) a else b
+```
+
+为什么可以不声明返回类型？每个变量和表达式都有类型，每个函数都有返回类型，对于表达式体函数来说，编译器会分析作为函数体的表达式，并把它的类型作为函数的返回类型。这种分析称作：**类型推导**
+
+* 注意：只有表达体式函数的返回类型可以省略。
+
+### 变量
+
+在Kotlin中声明变量以关键字开始，然后是变量名称，最后可以加上类型（也可以不加）
+
+```
+val answer = 42
+
+val answer: Int = 42
+
+val name = "Kotlin"
+```
+
+和表达体式函数一样，不指定变量的类型，编译器会分析初始化器表达式的值，并把它的类型作为变量的类型。
+
+若变量没有初始化器，*需要显式地指定它的类型*
+
+```
+val answer: Int
+
+answer = 42
+```
+
+### 可变变量和不可变变量
+
+声明变量的关键字有两个：
+
+* val ：不可变引用。使用val声明的变量不能在初始化之后再次赋值。对应Java的final变量。
+* var ：可变引用。这种变量的值可以被改变。对应的是普通（非final）的Java变量。
+
+应该尽可能地使用val关键字来声明Kotlin变量，仅在必要的时候换成var。**即使var关键字允许变量改变自己的值，但它的类型却是改变不了的**。编译器只会根据初始化器来推断变量的类型。
+
+### 字符串模板
+
+```
+fun main(args : Array<String>) {
+    val name = if(args.size > 0) args[0] else "Kotlin"
+    println("Hello, $name!")
+}
+```
+
+这种新特性叫做*字符串模板*。可以在字符串字面值中引用局部变量，在变量名称前面加上字符*$*。
+
+还可以引用更复杂的表达式，而不是仅限于简单的变量名称，只需要把表达式用花括号括起来。
+
+```
+fun main(args : Array<String>) {
+    if(args.size > 0) {
+        println("Hello, ${args[0]}!")
+    }
+}
+```
+
+还可以在双引号中直接嵌套双引号，只要它们处于某个表达式的范围内。
+
+```
+fun main(args : Array<String>) {
+    println("Hello, ${if(args.size > 0) args[0] else "someone"}!")
+}
+```
+
+## 类和属性
+
+```
+// Java类
+public class Person() {
+    private final String name;
+
+    public Person(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// Kotlin
+class Person(val name: String)
+```
+
+这种类（只有数据没有其他代码）通常被叫做*值对象*。（例如Json解析实体）
+
+### 属性
+
+在Java中，字段和其访问器的组合常常被叫做属性。在Kotlin中，属性是*头等的语言特性*，完全替代了字段和访问器方法。在类中声明一个属性和声明一个变量一样：*使用val和var关键字*
+
+```
+class Person （
+    val name: String, // 只读属性：生成一个字段和一个简单的getter
+    var isMarried: Boolean // 可写属性：生成一个字段，一个getter和一个setter
+）
+```
+
+当你声明属性的时候，就声明了对应的访问器（只读属性只有一个getter，可写属性有一个getter和setter）。若有需要，可以声明自定义的访问器，使用不同的逻辑来计算和更新属性的值。
+
+```
+// Kotlin中使用Person类
+
+val person = Person("Bob", true)
+println(person.name)
+println(person.isMarried)
+
+-->Bob
+-->true
+```
+
+可以直接引用属性，不再需要调用getter。逻辑没有变化，但是代码更简单了。setter也一样，可以直接写person.isMarried = false。
+
+### 自定义访问器
+
+声明一个矩形，根据矩形长宽来判断是否是正方形。
+
+```
+class Rectangle(width: Int,height: Int) {
+    val isSquare: Boolean
+        get() {                     // 声明属性的getter
+            return height == width
+        }
+}
+```
+
+属性isSquare不需要字段来保存它的值。它有一个自定义的getter，它的值是每次访问属性的时候计算出来的。
+
+还可以写成
+
+```
+val isSquare: Boolean
+    get() = height == width
+```
+
+### Kotlin源码布局：目录和包
+
+Kotlin也有和Java相似的包的概念。每一个Kotlin文件都能以一条package语句开头，而文件中定义的所有声明都会被放在这个包中。和Java一样，导入语句放在文件的最前面并使用关键字*import*
+
+Kotlin不区分导入的是类还是函数，而且，它允许使用import导入任何种类的声明。
+
+.\*导入特定包中定义的所有的声明，这种方法*不仅让包中定义的类可见，也会让顶层函数和属性可见*。
+
+在Java中，要把类放到和包结构相匹配的文件与目录结构中。在Kotlin中，可以把多个类放在同一个文件中，文件的名字还可以随意选择，Kotlin也没有对磁盘上源文件的布局强加任何限制。
+
+## 枚举和“when”
+
+“when”可以被认为是Java中switch结构的替代品，但是它更强大，也使用的更频繁。
+
+### 声明枚举
+
+```
+enum class Color {
+    RED,GREEN,BLUE,YELLOW
+}
+```
+
+enum是*软关键字*：只有它出现在class前面时才有特殊的意义，在其他地方可以把它当作普通的名称使用。
+
+和Java一样，*可以给枚举类声明属性和方法*
+
+```
+enum class Color(val r: Int,val g: Int,val b: Int) {
+    RED(255,0,0),
+    GREEN(0,255,0),
+    BLUE(0,0,255),
+    YELLOW(255,255,0); // 这个分号是必须要加的
+
+    fun rgb() = (r * 256 + g) * 256 + b
+}
+```
+
+在Kotlin中唯一必须使用分号的地方：若要在枚举类中定义任何方法，就要使用分号把枚举常量列表和方法定义分开。
+
+### 使用“when”处理枚举类
+
+*when是一个有返回值的表达式*，因此可以写一个直接返回when表达式的表达式函数
+
+```
+fun getMnemonic(color: Color) = 
+    when(color) {
+        Color.RED -> "Richard"
+        Color.GREEN -> "Gave"
+        Color.BLUE -> "Battle"
+        Color.YELLOW -> "York"
+    }
+}
+```
+
+*不需要在每个分支都写上break语句*。若匹配成功，只有对应的分支会执行，也可以把多个值合并到同一个分支，只需要把值用逗号隔开。
+
+```
+fun getWarmth(color: Color) = 
+    when(color) {
+        Color.RED,Color.YELLOW -> "warm"
+        Color.GREEN -> "neutral"
+        Color.BLUE -> "cold"
+    }
+```
+
+### 在“when”结果中使用任意对象
+
+Java中，switch要求必须使用常量（枚举常量，字符串或者数字字面值）作为分支条件。when允许使用任何对象。
+
+```
+fun mix(color1: Color,color2: Color) = 
+    when(setOf(color1,color2)) {
+        setOf(RED,YELLOW) -> "ORANGE"
+        setOf(YELLOW,BLUE) -> "GREEN"
+        else -> throw Exception("Dirty Color")
+    }
+```
+
+when表达式把它的实参依次和所有分支匹配，直到某个分支满足条件。*若没有其他的分支满足条件，else分支会执行*。
+
+### 使用不带参数的“when”
+
+上面代码的效率有点低，每次调用这个函数的时候，它都会创建一些Set实例，仅仅用来检查两种给定的颜色是否和另外两种颜色匹配。若调用频繁，就值得用另一种方式重写，避免创建额外的垃圾对象
+
+```
+fun mix(color1: Color,color2: Color) = 
+    when {
+        (color1 == RED && color2 == YELLOW) ||
+        (color1 == YELLOW && color2 == RED) -> "ORANGE"
+
+        (color1 == YELLOW && color2 == BLUE) ||
+        (color1 == BLUE && color2 == YELLOW) -> "GREEN"
+
+        else -> throw Exception("Dirty Color")
+    }
+```
+
+若没有给when表达式提供参数，分支条件就是任意的布尔表达式。
+
+### 智能转换：合并类型检查和转换
+
+使用*is检查*来判断一个变量是否是某种类型。is检查和Java中的instanceOf相似，但是在Java中，instanceOf检查之后还需要显式地加上类型转换。在Kotlin中，编译器帮你完成了这些工作，检查过一个变量是某种类型，后面就不需要转换它，直接把它当作检查过的类型使用。
+
+编译器为你执行了类型转换，这种行为称为：*智能转换*
+
+```
+// Java
+if(context instanceOf Activity) {
+    ((Activity)context).finish();
+}
+
+// Kotlin
+if(context is Activity) {
+    context.finish()
+}
+```
+
+智能转换只在变量经过is检查且之后不再发生变化的情况下有效。对一个类的属性进行智能转换的时候，这个属性必须是一个val属性，而且不能有自定义的访问器。
+
+使用*as关键字*来表示到特定类型的显示转换
+
+```
+val activity = context as Activity
+```
+
+### 用“when”代替“if”
+
+```
+fun eval(context: Context) = 
+    if(context is MainActivity) {
+        context.finish()
+    } else if(context is SecondActivity) {
+        context.change()
+    } else {
+
+    }
+```
+
+若if分支中只有一个表达式，花括号是可以省略的。若if分支是一个代码块，代码块中的最后一个表达式会被当作结果返回。
+
+```
+fun eval(context: Context) = 
+    when(context) {
+        is MainActivity -> context.finish()
+        is SecondActivity -> context.change()
+        else ....
+    }
+```
+
+### 代码块作为"if"和“when”的分支
+
+if和when都可以使用代码块作为分支体。*代码块的最后一个表达式就是结果*
+
+```
+fun print(any: Any): Int = 
+    when(any) {
+        is Int -> {
+            println("num: $any")
+            any
+        }
+        is Long -> {
+            println("num: $any")
+            any.toInt()
+        }
+        is Float -> {
+            println(num: $any)
+            any.toInt()
+        }
+    }
+```
+
+*代码块中最后的表达式就是结果*，在所有使用代码块并期望得到一个结果的地方成立。
+
+这个规则对常规函数不成立，一个函数要么具有不是代码块的表达式函数体，要么具有包含显式return语句的代码块函数体。
+
+## “while”循环和“for”循环
+
+### “while”循环
+
+while循环和do-while循环，它们的语法和Java中相应的循环没有区别
+
+```
+// Java 
+while(condition) {
+    ...
+}
+
+do {
+    ...
+} while(condition)
+
+// Kotlin
+while(condition) {
+    ...
+}
+
+do {
+    ...
+} while(condition)
+```
+
+### 区间和数列
+
+Kotlin中没有常规的Javafor循环。（先初始化变量，在循环的每一步更新它的值，在值满足某个限制条件时退出循环）
+
+```
+// Java 
+for(int i = 0;i < 100;i++) {
+    ...
+}
+```
+
+为了替代这种最常见的循环用法，Kotlin使用了**区间**的概念
+
+区间就是两个值之间的间隔，一个起始值，一个结束值。使用*..运算符*来表示区间
+
+```
+val oneToTen = 1..10
+```
+
+Kotlin的区间是包含的或者闭合的。即第二个值始终是区间的一部分。
+
+用整数区间做的最基本的事情就是循环迭代其中所有的值。若能迭代区间中所有的值，这样的区间被称为*数列*
+
+```
+fun fizzBuzz(i: Int) = 
+    when(i) {
+        i % 15 == 0 -> "FizzBuzz"
+        i % 5 == 0 -> "Buzz"
+        i % 3 == 0 -> "Fizz"
+        else -> "$i"
+    }
+
+for (i in 1..100) {
+    println(fizzBuzz(i))
+}
+
+1 2 Fizz 4 Buzz Fizz 7 ...
+```
+
+还可以倒着数
+
+```
+for(i in 100 downTo 1) {
+    println(fizzBuzz(i))
+}
+```
+
+倒着数而且只记偶数
+
+```
+for(i in 100 downTo 1 step 2) {
+    println(fizzBuzz(i))
+}
+```
+
+迭代一个*带步长*的数列，它允许你跳过一些数字。步长也可以是负数，这种情况下数列是递减而不是递增的。
+
+许多情况下我们迭代不包含指定结束值的半闭合区间更方便。使用*until*函数可以创建这样的区间
+
+```
+// Java 
+for(int i = 0; i < list.size(); i++)
+
+// Kotlin
+for(i in 0 until list.size())
+```
+
+这两种方法是等同的。
+
+### 迭代map
+
+使用for...in循环的最常见的场景是迭代集合，这和Java中的用法一样。下面看看怎样迭代map。
+
+```
+// 把字符和对应的二进制存进一个map中
+
+val binaryReps = TreeMap<Char,String>()
+
+for(c in 'A'..'F') {
+    val binary = Integer.toBinaryString(c.toInt())
+    binaryReps[c] = binary
+}
+
+for((letter,binary) in binaryReps) {
+    println("$letter:->$binart")
+}
+```
+
+..语法不仅可以创建数字区间，还可以创建字符区间。
+
+根据键来访问和更新map的简明语法：使用map[key]读取值，并使用map[key]=value设置它们。
+
+```
+binaryReps[key] = value 等价于 binaryReps.put(key,value)
+```
+
+迭代集合的同时跟踪当前项的下标，不需要创建一个单独的变量来存储下标并手动增加
+
+```
+val list = arrayListOf(1,2,3,4)
+for((index,element) in list.withIndex()) {
+    println("$index:->$element")
+}
+```
+
+使用关键字*in*来迭代区间或者集合。
+
+### 使用“in”检查区间和集合的成员
+
+使用in运算符来检查一个值是否在区间中，或者它的逆运算*!in*来检查这个值是否不在区间中。
+
+```
+fun isLetter(c: Char) = c in 'a'..'z' || c in 'A'..'Z'
+
+fun isNotDigit(c: Char) = c !in '0'..'9'
+
+isLetter('Q') ----> true
+isNotDigit('x') ------> true
+```
+
+in运算符和!in运算符也适用于when表达式
+
+```
+fun recognize(c: Char) = 
+    when(c) {
+        in '0'..'9' -> "It is a digit"
+        in 'a'..'z', in 'A'..'Z' -> "It is a letter"
+        else -> "I don't know" 
+    }
+
+println('Q') ------> It is a letter
+```
+
+区间也不仅限于字符，任意一个支持实例比较操作的类（实现了java.lang.Comparable接口），都能创建区间。但是这样的区间，并不能列举出这个区间中所有的对象。
+
+in检查也同样适用于集合
+
+```
+println("Kotlin" in arrayListOf("Java","C","C++")) -------->false
+
+// 这个集合不包含字符串“Kotlin”
+```
+
+## Kotlin中的异常
+
+Kotlin的异常处理和Java的处理方式相似：一个函数可以正常结束，也可以在出现错误的情况下抛出异常。方法的调用者能捕获这个异常并处理它，若没有被处理，异常会沿着调用栈再次抛出。
+
+```
+if(percent !in 0..100) {
+    throw IllegalArgumentException("A percentage value must be beween 0 and 100: $ percent")
+}
+```
+
+* 和所有其他的类一样，不必使用new关键字来创建异常实例
+* Kotlin中throw结构是一个表达式，能作为另一个表达式的一部分使用
+
+```
+val percent = 
+    if(number in 0..100)
+        number
+    else 
+        throw IllegalArgumentException("A percentage value must be beween 0 and 100: $ number")
+```
+
+若条件满足，程序的行为是正确的，percent变量会用number初始化。否则，异常将会被抛出，而变量也不会初始化。
+
+### "try" "catch" 和 "finnally"
+
+和Java一样，使用带有catch和finally子句的try结构来处理异常。
+
+```
+fun readNumber(reader: BufferReader): Int? { // 不必显式地指定这个函数可能抛出的异常
+    try {
+        val line = reader.readLine()
+        return Integer.parseInt(line)
+    } catch(e: NumberFormatException) { // 异常类型在右边
+        return null
+    } finally { // finally的作用和Java中的一样
+        reader.close()
+    }
+}
+```
+
+和Java最大的区别就是throws子句没有出现在代码中。若用Java来写这个函数，会显式地在函数声明后面写上*throws IOException*。因为IOException是一个受检异常。在Java中，这种异常必须显式地处理。必须声明你的函数能抛出的所有受检异常。
+
+Kotlin并不区分受检异常和未受检异常。不用指定函数抛出的异常，而且可以处理也可以不处理异常。
+
+### "try"作为表达式
+
+```
+fun readNumber(reader: BufferReader) {
+    val number = try {
+        Integer.parseInt(reader.readLine())
+    } catch(e: NumberFormatException) {
+        return
+    }
+
+    println(number)
+}
+
+val reader = BufferedReader(StringReader("not a number"))
+readNumber(reader)       --------->没有输出
+```
+
+try关键字就像if和when关键字一样，引入了一个表达式，可以把它的值赋给一个变量。不同于if，*总是需要用花括号把语句主体括起来*
+
+上面列子中，return语句放在catch代码块中，因此该函数的执行在catch代码块之后不会继续。若想继续，catch子句也需要有一个值，它将是自居中最后一个表达式的值。
+
+```
+fun readNumber(reader: BufferReader) {
+    val number = try {
+        Integer.parseInt(reader.readLine())
+    } catch(e: NumberFormatException) {
+        null
+    }
+
+    println(number)
+}
+
+val reader = BufferedReader(StringReader("not a number"))
+readNumber(reader)       --------->null
+```
+
+若一个try代码块执行一切正常，代码块中最后一个表达式就是结果。若捕获到了一个异常，catch代码块中最后一个表达式就是结果。
+
+## 总结
+
+* fun关键字用来声明函数，val和var关键字分别用来声明只读变量和可变变量
+* 字符串模板可以避免繁琐的字符串链接
+* 值对象类在Kotlin中以简洁的方式表示
+* if是带有返回值的表达式
+* when表达式类似Java中的switch，但功能更强大
+* 在检查过变量具有某种类型之后不必显式地转换它的类型：编译器智能转换
+* for，while和do-while循环和Java类似。
+* 简洁语法1..5会创建一个区间。区间和数列允许Kotlin在for循环中使用统一的语法和同一套抽象机制
+* Kotlin中的异常处理和Java非常相似。Kotlin不要求你声明函数可以抛出的异常

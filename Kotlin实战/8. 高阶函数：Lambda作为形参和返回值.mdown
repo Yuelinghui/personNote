@@ -1,0 +1,596 @@
+# 高阶函数：Lambda作为形参和返回值
+
+Lambda是一个构建抽象概念的强大工具，当然它的能力并不局限于标准库中提供的集合和其他类。
+
+创建*高阶函数*——属于自己的，使用Lambda作为参数或者返回值的函数。
+
+*内联函数*——Kotlin的一个强大特性，它能够消除Lambda带来的性能开销，还能够使Lambda内的控制流更加灵活。
+
+## 声明高阶函数
+
+*高阶函数*就是以另一个函数作为参数或者返回值的函数。
+
+在Kotlin中，函数可以用Lambda或者函数引用来表示。因此，任何以Lambda或者函数引用作为参数的函数，或者返回值为Lambda或函数引用的函数，或者两者都满足的函数都是高阶函数。比如之前的map，filter，with等等。
+
+### 函数类型
+
+把Lambda表达式保存在变量中：
+
+```
+val sum = {x: Int, y: Int -> x+y}
+```
+
+不声明类型的情况下就能做到这一点，依赖的是Kotlin的类型推导。编译器推导出sum变量具有函数类型。显式地声明这些变量的类型：
+
+```
+val sum: (Int, Int) -> Int = {x, y -> x+y}
+             ^          ^
+             |          |
+           参数类型    返回类型
+```
+
+声明函数类型，需要*将函数参数类型放在括号里，紧接着是一个箭头和函数的返回类型*。
+
+在声明一个普通的函数时，Unit类型的返回值是可以省略的，但是一个函数类型声明*总是需要一个显式的返回类型*，所以Unit是不能省略的。
+
+上面的Lambda表达式省略了参数x和y的类型，因为它们的类型已经在函数类型的变量声明部分指定了，不需要在Lambda本身的声明中再重复声明了。
+
+函数类型的返回值也可以标记为可空类型：
+
+```
+var canReturnNull: (Int, Int) -> Int? = {null}
+```
+
+也可以定义一个函数类型的可空变量。*需要将整个函数类型的定义包含在括号内并在括号后面添加问号*：
+
+```
+var funOrNull: ((Int, Int) -> Int)? = null
+```
+
+上面两个例子有微秒的区别。若省略了括号，声明的将会是一个返回值可空的函数类型，而不是一个可空的函数类型的变量。
+
+#### 函数类型的参数名
+
+可以为函数类型声明中的参数指定名字：
+
+```
+fun performRequest(url: String, callback: (code: Int, content: String) -> Unit) {
+    ...
+}
+```
+
+参数名称不会影响类型的匹配。当你声明一个Lambda时，不必使用和函数类型声明中一模一样的参数名称，但命名会提升代码可读性并且能用于IDE的代码补全。
+
+### 调用作为参数的函数
+
+```
+// 定义一个简单高阶函数
+fun twoAndThree(operation: (Int, Int) -> Int) {
+    val result = operation(2,3)
+    println(The result is $result)
+}
+
+twoAndThree {a, b -> a + b} --------> The result is 5
+twoAndThree {a, b -> a * b} --------> The result is 6
+```
+
+调用作为参数的函数和调用普通函数的语法一样：*把括号放在函数名后，并把参数放在括号内*。
+
+```
+// 实现String类型的filter函数
+fun String.filter(predicate: (Char) -> Boolean) : String {
+    val sb = StringBuilder()
+    for(index in 0 until length) {
+        val element = get(index)
+        if(predicate(element)) sb.append(element)
+    }
+    return sb.toString()
+}
+
+println("ab24c".filter { it in 'a'..'z'}) --------> abc
+```
+filter函数的实现非常简单明了，它检查每一个字符是否满足判断式，若满足就将字符添加到包含结果的StringBuilder中。
+
+
+### 在Java中使用函数类
+
+原理：函数类型被声明为普通的接口：一个函数类型的变量是FunctionN接口的一个实现。Kotlin标准库定义了一系列的接口，这些接口对应于不同参数数量的函数：Function0<R>（没有参数的函数），Function1<P1,R>（一个参数的函数）等。
+
+每个接口定义了一个invoke方法，调用这个方法就会执行函数。一个函数类型的变量就是实现了对应的FunctionN接口的实现类的实例，实现类的invoke方法包含了Lambda函数体。
+
+```
+// Kotlin声明
+fun precessTheAnswer(f: (Int) -> Int) {
+    println(f(42))
+}
+
+// Java调用
+processTheAnswer(new Function1<Integer, Integer> () {
+        @Override
+        public Integer invoke(Integer number) {
+            System.out.prinltn(number);
+            return number + 1;
+        }
+})
+43
+```
+
+在Java中可以很容易地使用Kotlin标准库中以Lambda作为参数的扩展函数。但是它们看起来并没有Kotlin中那么直观——必须要显式地传递一个接收者对象作为第一个参数：
+
+```
+List<String> strings = new ArrayList();
+strings.add("42");
+
+CollectionKt.forEach(strings, s -> {
+    System.out.println(s);
+    return Unit.INSTANCE; // 必须要显式地返回一个Unit类型的值
+    });
+```
+
+在Java中，函数或者Lambda可以返回Unit。但因为在Kotlin中Unit类型是有一个值的，所以需要显式地返回它。一个返回void的Lambda不能作为返回Unit的函数类型的实参。
+
+### 函数类型的参数默认值和null值
+
+声明函数类型的参数的时候可以指定参数的默认值。比如之前的joinToString函数，可以定义一个函数类型的参数并用Lambda作为它的默认值。
+
+```
+fun <T> Collection<T>.joinToString(separator: String = ",",prefix: String = ""
+        ,postfix: String = "",transform: (T) -> String = { it.toString()}) : String {
+            val result = StringBuilder(prefix)
+
+            for((index,element) in this.withIndex()) {
+                if(index > 0) result.append(separator)
+                result.append(transform(element))
+            }
+            result.append(postfix)
+            return result.toString()
+}
+
+val leeters = listOf("Alpha","Beta")
+
+println(letters.joinToString()) ------> Alpha,Beta
+println(letters.joinToString {it.toLowerCase()}) ------> alpha,beta
+```
+
+这是一个泛型函数：它有一个类型参数T表示集合中的元素的类型。Lambda的transform将接收这个类型的参数。
+
+声明函数类型的默认值并不需要特殊的语法——只需要把Lambda作为值放在=号后面。
+
+另一种选择是声明一个参数为可空的函数类型。注意：*不能直接调用作为参数传递进来的函数，Kotlin会因为检测到潜在的空指针异常而导致编译失败。*
+
+一种可选方法是显式地检查null：
+
+```
+fun foo(callback: (() -> Unit)?) {
+    if(callback != null) {
+        callback()
+    }
+}
+```
+
+还有更简单的版本，它利用了这样一个事实：函数类型是一个包含invoke方法的接口的具体实现：
+
+```
+// 使用函数类型的可空参数
+fun <T> Collection<T>.joinToString(separator: String = ",",prefix: String = ""
+        ,postfix: String = "",transform: ((T) -> String)? = null) {
+            val result = StringBuilder(prefix)
+
+            for((index,element) in this.withIndex()) {
+                if(index > 0) result.append(separator)
+                val str = transform?.invoke(element) ?: element.toString()
+                result.append(str)
+            }
+            result.append(postfix)
+            result.toString()
+}
+```
+
+### 返回函数的函数
+
+从函数中返回另一个函数并没有将函数作为参数传递那么常用，但仍然非常有用。程序中的一段逻辑可能会因为程序的状态或者其他条件而产生变化——比如，运输费用的计算依赖于选择的运输方式：
+
+```
+// 定义一个返回函数的函数
+enum class Delivery{STANDARD,EXPEDITED}
+
+class Order(val itemCount: Int)
+
+fun getShippingCostCalculator(delivery: Delivery) : (Order) -> Double {
+    if(delivery == Delivery.EXPEDITED) {
+        return { order -> 6 + 2.1 * order.itemCount}
+    }
+    return { order -> 1.2 * order.itemCount}
+}
+
+val calculator = getShippingCostCalculator(Delivery.EXPEDITED)
+println(${calculator(Order(3))}) ---------> 12.3
+```
+
+声明一个返回另一个函数的函数，需要制定一个函数类型作为返回类型。要返回一个函数，需要写一个return表达式，跟上一个Lambda，一个成员引用，或者其他的函数类型的表达式，比如一个（函数类型的）局部变量。
+
+比如通讯录中，输入D来查看姓名以D开头的联系人：
+
+```
+// 定义一个函数的函数
+data class Person(val firstName: String, val lastName: String, val phoneNember: String?)
+
+class ContactListFilters {
+    var prefix: String = ""
+    var onlyWithPhoneNumber: Boolean = false
+
+    fun getPredicate(): (Person) -> Boolean {
+        val startsWithPrefix = {p: Person -> p.firstName.startWith(prefix) || p.lastName.startWith(prefix)}
+
+        if(!onlyWithPhoneNumber) {
+            return startsWithPrefix
+        }
+        return {startsWithPrefix(it) && it.phoneNumber != null}
+    }
+}
+
+val contants = listOf(Person("Dmitry","Jemerov","123-4567"),
+                      Person("Svetlana","Isakova",null))
+val contactListFilters = ContactListFilters()
+with(contactListFilsters) {
+    prefix = "Dm"
+    onlyWithPhoneNumber = true
+}
+println(contacts.filter(contactListFilters.getPredicate()))
+
+----->[Person(firstName=Dmitry, lastName=Jemerov, phoneNumber=123-4567)]
+```
+
+getPredicate方法返回一个函数（类型）的值，这个值被传递给filter作为参数。Kotlin的函数类型可以让一切变得简单，就跟处理其他类型的值一样，比如字符串。
+
+### 通过Lambda去除重复代码
+
+函数类型和Lambda表达式一起组成了一个创建可重用代码的好工具。许多以前只能通过复杂笨重的结构来避免的重复代码，现在可以通过使用简介的Lambda表达式被消除。
+
+```
+// 定义站点访问数据
+data class SiteVisit(val path: String, val duration: Double,val os: OS)
+
+enum class OS {WINDOWS, LINUX, MAC, IOS, ANDROID}
+
+val log = listOf(SiteVisit("/", 34.0, OS.WINDOWS),
+                 SiteVisit("/", 22.0, OS.MAC),
+                 SiteVisit("/login", 12.0, OS.WINDOWS),
+                 SiteVisit("/signup", 8.0, OS.IOS),
+                 SiteVisit("/", 16.3, OS.ANDROID))
+```
+
+需要显示来自Windows机器的平均访问时间，可以用average函数来完成：
+
+```
+// 使用硬编码的过滤器
+val averageWindowsDuration = log.filter{it.os == OS.WINDOWS}.map(SiteVisit::duration).average()
+```
+
+假设要计算来自MAC用户的相同数据，为了避免重复，可以将平台类型抽象为一个参数：
+
+```
+// 抽象平台类型
+fun List<SiteVisit>.averageSurationFor(os: OS) = filter(it.os == os).map(SiteVisit::duration).average()
+```
+
+将这个函数作为扩展函数增强了可读性。若它只在局部的上下文中有用，设置可以将这个函数声明为局部扩展函数。
+
+若你对来自移动平台（即IOS和ANDROID）的访问的平均时间感兴趣：
+
+```
+val averageMobileDuration = log.filter{it.os == OS.IOS && it.os == OS.ANDROID}.map(SiteVisit::duration).average()
+```
+
+可能我们还需要更多复杂的条件来查询日志，这是Lambda可以帮上忙。可以用函数类型将需要的条件抽取到一个参数中：
+
+```
+// 用一个高阶函数去除重复代码
+fun List<SiteVisit>.averageDuration(predicate: (SiteVisit) -> Boolean) = filter(predicate).map(SiteVisit::duration).average()
+
+val mobileDuration = log.averageDuration{it.os in setOf(OS.ANDROID,OS.IOS)}
+val macDuration = log.averageDuration{it.os == OS.MAC}
+val iosSignupDuration = log.averageDuration{it.os == OS.IOS && it.path == "/signup"}
+```
+
+函数类型可以帮助去除重复代码。使用Lambda不仅可以抽取重复的数据，也可以抽取重复的行为。
+
+一些设计模式可以用函数类型和Lambda表达式进行简化。比如策略模式。没有Lambda表达式的情况下，需要声明一个接口，并为每一个可能的策略提供实现类。使用函数类型，可以用一个通用的函数类型来描述，然后传递不同的Lambda表达式作为不同的策略。
+
+## 内联函数：消除Lambda带来的运行时开销
+
+Kotlin中传递Lambda作为函数参数的简明语法与普通的表达式语法很相似。Lambda表达式会被正常地编译成匿名类。这表达会每调用一次Lambda表达式，一个额外的类就会被创建。并且若Lambda捕捉了某个变量，每次调用的时候都会创建一个新的对象。这会带来运行时的额外开销，导致使用Lambda比使用一个直接执行相同代码的函数效率更低。
+
+有没有可能让编译器生成跟Java语法同样高效的代码，但还是能把重复的逻辑抽取到库函数中呢？Kotlin的编译器能够做到！
+
+使用*inline*修饰符标记一个函数，在函数被使用时，编译器并不会生成函数调用的代码，而是使用函数实现的真实代码替换每一次的函数调用。
+
+### 内联函数如何运作
+
+当一个函数被声明为inline时，它的函数体是内联的——函数体会被直接替换到函数被调用的地方，而不是被正常调用。
+
+```
+// 定义一个内联函数
+inline fun <T> synchronized(lock: Lock, action: () -> T) : T {
+    lock.lock()
+    try {
+        return action()
+    } finally {
+        lock.unlock()
+    }
+}
+
+val l = Lock()
+synchronized(l) {
+    ...
+}
+```
+
+调用这个函数的语法跟Java中使用synchronized语法完全一样。区别在于Java的synchronized语法可以用于任何对象，而这个函数则要求传入一个Lock实例。
+
+因为synchronized函数被声明为inline，所以每次调用它所生成的代码跟Java的synchronized语句是一样的：
+
+```
+fun foo(l: Lock) {
+    println("Before sync")
+    synchronized(l) {
+        println("Action")
+    }
+    println("After sync")
+}
+
+fun _foo_(l: Lock) {
+    println("Before sync")
+    l.lock()
+    try {
+        println("Action")
+    } finally {
+        l.unlock()
+    }
+    println("After sync")
+}
+```
+
+上面的代码作用相同，同时也会被编译成同样的字节码。
+
+Lambda表达式和synchronized函数的实现都被内联了。由Lambda生成的字节码成为了函数调用者定义的一部分，而不是被包含在一个实现了函数接口的匿名类中。
+
+在调用内联函数的时候也可以传递函数类型的变量作为参数：
+
+```
+class LockOwner(val lock: Lock) {
+    fun runUnderLock(body: () -> Unit) {
+        synchronized(lock,body) // 传递一个函数类型的变量作为参数
+    }
+}
+```
+
+这时，Lambda的代码在内联函数被调用点是不可用的，因此并不会被内联。只有synchronized的函数体被内联了，Lambda才会被正常调用。runUnderLock函数会被编译成类似以下函数的字节码：
+
+```
+class LockOwner(val lock: Lock) {
+    fun _runUnderLock_(body: () -> Unit) {
+        lock.lock()
+        try {
+            body()
+        } finally {
+            lock.unlock()
+        }
+    }
+}
+```
+
+若在两个不同的位置使用同一个内联函数，但是用的是不同的Lambda，那么内联函数会在每一个被调用的位置被分别内联。内联函数的代码会拷贝到使用它的两个不同位置，并把不同的Lambda替换到其中。
+
+### 内联函数的限制
+
+不是所有使用Lambda的函数都可以被内联。当函数被内联的时候，作为参数的Lambda表达式的函数体会直接替换到最终生成的代码中。这将限制函数体中对应（Lambda）参数的使用。
+
+若（Lambda）参数被调用，这样的代码能被容易地内联。但若（Lambda）参数在某个地方被保存起来，以便后面可以继续使用，Lambda表达式的代码将不能被内联，因为必须要有一个包含这些代码的对象存在。
+
+参数若被直接调用或者作为参数传递给另外一个inline函数，它是可以被内联的。否则，编译器会禁止参数被内联并给出错误信息“Illegal usage of inline-parameter”(非法使用内联参数)。
+
+例如，许多作用于序列的函数会返回一些类的实例，这些类代表对应的序列操作并接收Lambda作为构造方法的参数：
+
+```
+// sequence.map函数
+
+fun <T,R> Sequence<T>,map(transform: (T) -> R): Sequence<R> {
+    return TransformingSequence(this,transform)
+}
+```
+
+map函数没有直接调用作为transform参数传递进来的函数，而是将这个函数传递给一个类的构造方法，构造方法将它保存在一个属性中。为了支持这一点，作为transform参数传递的Lambda需要被编译成标准的非内联的表示法，即一个实现了函数接口的匿名类。
+
+若一个函数期望两个或更多Lambda参数，可以选择只内联其中一些参数。因为一个Lambda可能会包含很多代码或者以不允许内联的方式使用。*接收这样的非内联Lambda的参数，可以用noinline修饰符来标记它*：
+
+```
+inline fun foo(inlined: () -> Unit, noinline notInlined: () -> Unit) {
+    ...
+}
+```
+
+*注意：编译器完全支持内联跨模块的函数或者第三方库定义的函数*。也可以在Java中调用绝大部分内联函数，但这些调用并不会被内联，而是被编译成普通的函数调用。
+
+### 内联集合操作
+
+```
+// 使用Lambda过滤一个集合
+data class Person(val name: String, val age: Int)
+
+val people = listOf(Person("Alice",29),Person("Bob",31))
+
+people.filter{it.age < 30}
+
+// 手动过滤一个集合
+val result = mutableListOf<Person>()
+
+for(person in people) {
+    if(person.age < 30) {
+        result.add(person)
+    }
+}
+
+println(result)
+```
+
+在Kotlin中，filter函数被声明为内联函数。这意味着filter函数，以及传递给它的Lambda字节码会被一起内联到filter被调用的地方。最终，两种实现方式所产生的字节码大致是一样的。Kotlin对内联函数的支持让我们不必担心性能的问题。
+
+连续调用filter和map两个操作：
+
+```
+prople.filter {it.age < 30}.map(Person::name)
+```
+
+这个代码创建了一个中间集合来保存列表过滤的结果，由filter函数生成的代码会向这个集合添加元素，而由map函数生成的代码会读取这个集合。
+
+若有大量元素需要处理，中间集合的运行开销将成为不可忽视的问题，这是可以使用序列调用来替换。但是用来处理序列的Lambda没有被内联，每一个中间序列被表示成把Lambda保存在其字段中的对象，而末端操作会导致由每一个中间序列调用组成的调用链被执行。因此，即使序列上的操作是惰性的，也不应该总是试图在集合操作的调用链加上asSequence。这只在处理大量数据的集合时有用，小的集合可以用普通的集合操作处理。
+
+### 决定何时将函数声明成内联
+
+使用inline关键字只能提高带有Lambda参数的函数的性能，其他的情况需要额外的度量和研究。
+
+对于普通的函数调用，JVM已经提供了强大的内联支持。它会分析代码的执行，并在任何通过内联能够带来好处的时候将函数内联。
+
+将带有Lambda参数的函数内联能带来好处。首先，通过内联避免的运行时开销更明显了，不仅节约了函数调用的开销，而且节约了为Lambda创建匿名类，以及创建Lambda实例对象的开销。其次，JVM目前并没有聪明到总是能将函数调用内联。最后，内联使得我们可以使用一些不可能被普通Lambda使用的特性。
+
+但是在使用inline关键字的时候，还是应该注意代码的长度。若要内联的函数很大，将它的字节码拷贝到每一个调用点将会极大地增加字节码的长度。这时，应该将那些与Lambda参数无关的代码抽取到一个独立的非内联函数中。
+
+### 使用内联Lambda管理资源
+
+Lambda可以去除重复代码的一个常见模式就是资源管理：先获取一个资源，完成一个操作，然后释放资源。实现这个模式的标准做法是使用try/finally语句。资源在try代码块之前获取，在finally代码块中被释放。
+
+```
+// Kotlin库中withLock函数的定义
+fun <T> Lock.withLock(action: () -> T): T {
+    lock()
+    try{
+        return action()
+    } finally {
+        unlock()
+    }
+}
+```
+
+文件是另一种可以使用这种模式的常见资源类型：
+
+```
+// 使用use函数作为资源管理
+fun readFirstLineFromFile(path: String): String {
+    BufferedReader(FileReader(path)).use {br -> return br.readLine()}
+}
+```
+
+use函数式一个扩展函数，被用来操作可关闭的资源，它接收一个Lambda作为参数。这个方法调用Lambda并且确保资源被关闭，无论Lambda正常执行还是抛出了异常。
+
+## 高阶函数中的控制流
+
+使用Lambda去替换像循环这样的命令式代码结构时，很快会遇到return表达式的问题。
+
+### Lambda中的返回语句：从一个封闭的函数返回
+
+```
+data class Person(val name: String, val age: Int) 
+val people = listOf(Person("Alice",29),Person("Bob",31))
+
+// 在一个普通循环中使用return
+fun lookForAlice(people: List<Person>) {
+    for(person in people) {
+        if(person.name == "Alice") {
+            println("Found!")
+            return
+        }
+    }
+    println("Alice is not found")
+}
+lookForAlice(people) -------> Found!
+
+// 在传递给forEach的Lambda中使用return
+fun lookForAlice(people: List<Person>) {
+    people.forEach {
+        if(it.name == "Alice"){
+            println("Found!")
+            retrun
+        }
+    }
+    println("Alice is not found")
+}
+```
+
+在Lambda中使用return关键字，它*会从调用Lambda的函数中返回，并不只是从Lambda中返回*。这样的return语句叫做*非局部返回*，因为它从一个比包含return的代码块更大的代码块中返回了。
+
+只有在*以Lambda作为参数的函数是内联函数的时候才能从更外层的函数返回*。在一个非内联函数的Lambda中使用return表达式是不允许的。一个非内联函数可以把传给它的Lambda保存在变量中，以便在函数返回以后可以继续使用，这个时候Lambda想要去影响函数的返回已经太晚了。
+
+### 从Lambda返回：使用标签返回
+
+也可以在Lambda表达式中使用局部返回。要区分局部返回和非局部返回，要用到*标签*。
+
+```
+// 用一个标签实现局部返回
+fun lookForAlice(people: List<Person>) {
+    people.forEach label@ {
+        if(it.name == "Alice") return @label
+    }
+    println("Alice might be somewhere")
+}
+lookForAlice(people) --------> Alice might be somewhere
+```
+
+要标记一个Lambda表达式，在Lambda的花括号之前放一个标签名（可以是任意标识符），接着放一个@符号。要从一个Lambda返回，在return关键字后放一个@符号，接着放标签名。
+
+使用Lambda作为参数的函数的函数名可以作为标签：
+
+```
+// 用函数名作为return标签
+fun lookForAlice(people: List<Person>) {
+    people.forEach {
+        if(it.name == "Alice") return @forEach
+    }
+    println("Alice might be somewhere")
+}
+```
+
+若你显式地指定了Lambda表达式的标签，再使用函数名作为标签啊没有任何效果。一个Lambda表达式的标签数量不能多于一个。
+
+### 匿名函数：默认使用局部返回
+
+匿名函数式一种不同的用于编写传递给函数的代码块的方式。
+
+```
+// 在匿名函数中使用return
+fun lookForAlice(people: List<Person>) {
+    people.forEach(fun (person) { // 使用匿名函数取代Lambda表达式
+        if(person.name == "Alice") return // return指向最近的函数：一个匿名函数
+        println("${person.name} is not Alice")
+        })
+```
+
+匿名函数看起来跟普通函数很相似，除了它的名字和参数类型被省略了外。
+
+```
+// 在filter中使用匿名函数
+people.filter(fun (person) : Boolean {
+        return person.age < 30
+    })
+```
+
+匿名函数和普通函数有相同的指定返回值类型的规则。
+
+在匿名函数中，不带标签的return表达式会从匿名函数返回，而不是从包含匿名函数的函数返回。*return从最近的使用fun关键字声明的函数返回*。
+
+注意，尽管匿名函数看起来跟普通函数很相似，但它其实是Lambda表达式的另一种语法形式而已。
+
+## 总结
+
+* 函数类型可以让你声明一个持有函数引用的变量，参数或者函数返回值。
+
+* 高阶函数以其他函数作为参数或者返回值。可以用函数类型作为函数参数或者返回值的类型来创建这样的函数。
+
+* 内联函数被编译以后，它的字节码连同传递给它的Lambda的字节码会被插入到调用函数的代码中，这使得函数调用相比于直接编写相同的代码，不会产生额外的运行时开销。
+
+* 高阶函数促进了一个组件内的不同部分的代码重用，也可以让你构建功能强大的通用库。
+
+* 内联函数可以让你使用非局部返回——在Lambda中从包含函数返回的返回表达式。
+
+* 匿名函数给Lambda表达式提供了另一种可选的语法，用不同的规则来解析return表达式。可以在需要编写有多个退出点的代码块的时候使用它们。
+

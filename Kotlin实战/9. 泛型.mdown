@@ -1,0 +1,744 @@
+# 泛型
+
+Kotlin中声明和使用泛型类以及泛型函数的基本概念和Java类似。Kotlin对于泛型引入了新的概念，比如实化类型参数和声明点变型。
+
+*实化类型参数*允许你在运行时的内联函数调用中引用作为类型实参的具体类型（对普通的类和函数来说，这不行，因为类型实参在运行时会被擦除）。
+
+*声明点变型*可以说明一个带类型参数的泛型类型，是否是另外一个泛型类型的子类型或者超类型，它们的基础类型相同但类型参数不同。使用点变型在具体使用一个泛型类型时做的事和Java通配符一样。
+
+## 泛型类型参数
+
+泛型允许定义带*类型形参*的类型。类型形参可以准确地进行描述，就像“这个变量保存了字符串列表”，而不是“这个变量保存了一个列表”。
+
+和一般类型一样，Kotlin编译器也常常能推导出类型实参：
+
+```
+val authors = listOf("Kotlin","Java")
+```
+
+因为传给listOf函数的两个值都是字符串，编译器推导出正在创建一个`List<String>`。若想创建一个空的列表，这样就没有任何可以推导出类型实参的线索，就得显式地指定它。
+
+```
+val readers: MutableList<String> = mutableListOf()
+
+val readers = mutableListOf<String>()
+```
+
+和Java不同，Kotlin始终要求类型实参要么被显式地说明，要么能被编译器推导出来。
+
+### 泛型函数和属性
+
+泛型函数有它自己的类型形参。这些类型形参在每次函数调用时都必须替换成具体的类型实参。
+
+大部分使用集合的库函数都是泛型的：
+
+```
+fun <T> List<T>.slice(indices: IntRange): List<T>
+```
+
+这个函数返回一个只包含在指定下标区间内的元素。接收者和返回类型用到了函数的类型形参T，它们的类型都是`List<T>`。
+
+在一个具体的列表上调用这个函数时，可以显式地指定类型实参。但是大部分情况下不必这么做，因为编译器会推导出类型：
+
+```
+val ltters = ('a'..'z').toList()
+println(letters.slice<Char>(0..2))
+println(letters.slice(10..13))
+```
+
+两次调用的结果都是`List<Char>`。
+
+可以给类或者接口的方法，顶层函数，以及扩展函数声明类型参数。
+
+*普通（即非扩展）属性不能拥有类型参数，不能在一个类的属性中存储多个不同类型的值，因此声明泛型非扩展属性没有任何意义。*
+
+### 声明泛型类
+
+和Java一样，Kotlin通过在类名称后加上一对尖括号，并把类型参数放在尖括号内来声明泛型类以及泛型接口。
+
+若你的类继承了泛型类（或者实现了泛型接口），就得为基础类型的泛型形参提供一个类型实参。它可以是具体类型或者另一个类型形参：
+
+```
+class StringList: List<String> {
+    override fun get(index: Int): String = ...
+}
+
+class ArrayList<T>: List<T> {
+    override fun get(index: Int): T = ...
+}
+```
+
+一个类甚至可以把它自己作为类型实参引用：
+
+```
+interface Comparable<T> {
+    fun compareTo(other: T): Int
+}
+
+class String: Comparable<String> {
+    override fun compareTo(other: String): Int = ...
+}
+```
+
+### 类型参数约束
+
+类型参数约束可以限制作为（泛型）类和（泛型）函数的类型实参的类型。
+
+把一个类型指定为泛型类型形参的上界约束，在泛型类型具体的初始化中，其对应的类型实参就必须是这个具体类型或者它的子类型。
+
+定义约束，就是把冒号放在类型参数名称之后，作为类型形参上界的类型紧随其后。
+
+```
+fun <T : Number> List<T>.sum(): T
+```
+
+一旦指定了类型形参T的上界，就可以把类型T的值当作它的上界（类型）的值来使用：
+
+```
+fun <T : Number> oneHalf(value: T) : Double {
+    return value.toDouble() / 2.0
+}
+```
+
+```
+// 声明带类型参数约束的函数
+fun <T : Comparable<T>> max(first: T, second: T): T {
+    return if (first > second) first else second
+}
+```
+
+当你试图对不能比较的条目调用max方法时，代码不会编译：
+
+```
+println(max("Kotlin",43))
+```
+
+需要在类型参数上指定多个约束，这是需要使用稍微不同的语法：
+
+```
+fun <T> ensureTrailingPeriod(seq: T) where T : CharSequence, T : Appendable {
+
+}
+```
+
+这时，可以说明作为类型实参的类型必须实现CharSequence和Appendable两个接口。
+
+### 让类型形参非空
+
+事实上，没有指定上界的类型形参将会使用Any?这个默认的上界。
+
+```
+class Processor<T> {
+    fun process(value: T) {
+        value?.hashCode()
+    }
+}
+```
+
+process函数中，参数value是可空的，尽管T并没有使用问号标记。
+
+想保证替换类型形参的始终是非空类型，可以通过指定一个约束来实现。
+
+```
+class Processor<T : Any> {
+    fun process(value: T) {
+        value.hashCode()
+    }
+}
+```
+
+约束`<T : Any>`确保了类型T永远都是非空类型。
+
+*注意：可以通过指定任意非空类型作为上界，来让类型参数非空，不光是类型Any。*
+
+## 运行时的泛型：擦除和实化类型参数
+
+和Java一样，Kotlin的泛型在运行时也会被*擦除*了。这意味着泛型类实例不会携带用于创建它的类型实参的信息。例如，创建了一个`List<String>`并将一堆字符串放到其中，在运行时只能看到它是一个List，不能识别出列表本打算包含的是哪种类型的元素。
+
+即使编译器看到的是两种完全不同类型的列表，在执行的时候它们看起来是完全一样的。因为编译器知道类型实参，并确保每个列表中只存储正确类型的元素。伴随着擦除类型信息的约束。因为类型实参没有被存储下拉，你不能检查它们。
+
+一般而言，在is检查中不可能使用类型实参中的类型：
+
+```
+if(value is List<String>) {...}
+--->ERROR:Cannot check for instance of erased type
+```
+
+信息被擦除了。擦除泛型类型信息是有好处的：应用程序使用的内存总量较小，因为要保存在内存中的类型信息更少。
+
+Kotlin不允许使用没有指定类型实参的泛型类型。若要检查一个值是列表，而不是set或者其他对象，可以*使用特殊的星号投影语法来做这种检查*：
+
+```
+if (value is List<*>) {...}
+```
+
+泛型类型拥有的每个类型形参都需要一个\*。前面的例子中，检查了value是否是List，而并没有得到关于它的元素类型的任何信息。
+
+在as和as?转换中仍然可以使用一般的泛型类型。但若该类有正确的基础类型但类型形参是错误的，转换也不会失败，因为在运行时转换发生的时候类型实参是未知的。
+
+```
+fun printSum(c: Collection<*>) {
+    val intList = c as? List<Int> ?; throw IllegalArgumentException("...")
+    println(intList.sum())
+}
+```
+
+编译正常：编译器只是发出了一个警告，这意味着代码是合法的。若在一个整型的列表或者set上调用该函数，一切都会如预期发生。但若你传递了一个错误类型的值，运行时会得到一个ClassCastException：
+
+```
+printlnSum(listOf("a","b","c"))
+-----> ClassCastException:String cannot be cast to Number
+```
+
+因为没有办法判断实参是不是一个`List<Int>`，因此类型转换会成功，无论如何函数sum都会在这个列表上调用。异常抛出，因为sum函数试着从列表中读取Number值然后把它们加在一起。
+
+Kotlin编译器是足够智能的，在编译期它已经知道相应的类型信息时，is检查是允许的：
+
+```
+fun printSum(c: Collection<Int>) {
+    if(c is List<Int>) {
+        println(c.sum())
+    }
+}
+```
+
+c是否拥有类型`List<Int>`的检查是可行的，因为在编译期就确定了集合包含的是整型数字。
+
+通常，Kotlin编译器会负责让你知道哪些检查是危险的（禁止is检查，以及发出as转换的警告），而哪些是可行的。
+
+Kotlin有特殊的语法结构可以允许在函数体中使用具体的类型实参，但是有inline函数可以。
+
+### 声明带实化类型参数的函数
+
+泛型的类型实参在运行时会被擦除。在调用泛型函数的时候，在函数体中不能决定调用它的类型实参：
+
+```
+fun <T> isA(value: Any) = value is T
+```
+
+内联函数的类型形参能够被实化，意味着可以在运行时引用实际的类型实参。
+
+把前面的例子修改一下：
+
+```
+inline fun <reified T> isA(value: Any) = value is T // 现在代码可以编译了。
+```
+
+一个实化类型参数能发挥作用的最简单的例子就是标准库函数filterIsInstance。
+
+```
+val items = listOf("one",2,"three")
+println(items.filterIsInstance<String>())
+--------> [one,three]
+```
+
+类型实参在运行时是已知的，函数filterIsInstance使用它来检查列表中的值是不是指定为该类型实参的类的实例。
+
+```
+inline fun <reified T> Iterable<*>.filterIsInstance(): List<T> {
+    val destination = mutableListOf<T>()
+    for (element in this) {
+        if (element is T) {
+            destination.add(element)
+        }
+    }
+    return destination
+}
+```
+
+#### 为什么实化只对内联函数有效
+
+编译器把实现内联函数的字节码插入每一次调用发生的地方。每次你调用带实化类型参数的函数时，编译器都知道这次特定调用中用作类型实参的确切类型。因此，编译器可以生成引用作为类型实参的具体类的字节码。
+
+因为生成的字节码引用了具体类，而不是类型参数，它不会被运行时发生的类型参数擦除影响。
+
+带reified类型参数的inline函数不能在Java代码中调用。带实化类型参数的函数需要额外的处理，来吧类型实参的值替换到字节码中，所以它们永远是内联的。不可能用Java那样普通的方式调用。
+
+一个内联函数可以有多个实化类型参数，也可以同时拥有非实化类型参数和实话类型参数。
+
+filterIsInstance虽然被标记为inline，但它并不期望Lambda作为实参，只是为了使用实化类型参数。
+
+### 使用实化类型参数代替类引用
+
+实化类型参数的另一种常见使用场景是为接收java.lang.Class类型参数的API构建适配器。
+
+使用标准的ServiceLoader加载一个服务：
+
+```
+val serviceImpl = ServiceLoader.load(Service::class.java)
+```
+
+::class.java的语法展现了如何获取java.lang.Class对应的Kotlin类。这和Java中的Service.class是完全等同的。
+
+使用带实化类型参数的函数重写：
+
+```
+val serviceImpl = loadService<Service>()
+
+inline fun <reified T> loadService() {
+    return ServiceLoader.load(T::class.java)
+}
+```
+
+这种用在普通类上的::class.java语法也可以用在实化类型参数上。
+
+```
+// startActivity函数
+inline fun <reified T : Activity> Context.startActivity() {
+    val intent = Intent(this,T::class.java)
+    startActivity(intent)
+}
+
+startActivity<MainActivity>()
+```
+
+### 实化类型参数的限制
+
+尽管实化类型参数是方便的工具，但它们也有一些限制。
+
+可以按下面的方式使用实化类型参数：
+
+* 用在类型检查和类型转换中（is，!is，as，as?）
+* 使用Kotlin反射API
+* 获取相应的java.lang.Class（::class.java）
+* 作为调用其他函数的类型实参
+
+不能做下面这些事：
+
+* 创建指定为类型参数的类的实例
+* 调用类型参数类的伴生对象的方法
+* 调用带实化类型参数函数的时候使用非实化类型形参作为类型实参
+* 把类，属性或者非内联函数的类型参数标记为reified
+
+## 变型：泛型和子类型化
+
+变型的概念描述了拥有相同基础类型和不同类型实参的（泛型）类型之间是如何关联的。
+
+### 为什么存在变型：给函数传递实参
+
+假设有一个接收List<Any>作为实参的函数，把`List<String>`类型的变量传给这个函数是否安全？毫无疑问，把一个字符串传给一个期望Any的函数是安全的，因为String类继承了Any。但是当String和Any变成List接口的类型实参之后，情况就没有这么简单了。
+
+```
+// 打印出列表内容
+fun printContents(list: List<Any>) {
+    println(list.joninToString())
+}
+printContents(listOf("abc","sdf"))
+```
+
+这个函数可以正常工作。函数把每个元素都当成Any对待，而且因为每一个字符串都是Any，这是安全的。
+
+```
+// 修改列表
+fun addAnswer(list: MutableList<Any>) {
+    list.add(42)
+}
+```
+
+若把一个字符串列表传给这个函数：
+
+```
+val strings = mutableListOf("abc","sdf")
+addAnswer(strings) // 假如这一行编译通过了，运行时就会产生一个异常
+println(strings.maxBy{it.length})
+```
+
+声明了一个类型为`MutableList<String>`的变量，然后尝试把它传给这个函数。假设编译器接收了，就能在字符串列表中添加一个整型，这回导致运行时尝试访问列表中的字符串的时候出现异常。所以这次调用不会通过编译。当期望是`MutableList<Any>`的时候把一个`MutableList<String>`当作实参传递是不安全的，Kotlin编译器正确地禁止了它。
+
+把一个字符串列表传给期望Any对象列表的函数是否安全？若函数添加或者替换了列表中的元素就是不安全的，因为这样会产生类型不一致的可能性。否则它就是安全的。
+
+若函数接收的是只读列表，可以传递具有更具体的元素类型的列表。若列表是可变的，就不能这么做了。
+
+### 类，类型和子类型
+
+变量的类型规定了该变量的可能值。有时候我们把类型和类当作同样的概念使用。但它们不一样，看看它们的区别。
+
+非泛型类，类的名称可以直接当作类型使用。例如可以写`var x: String`，声明了一个可以保存String类的实例的变量。但是同样的类名称也可以用来声明可空类型`var x: String?`。每一个Kotlin类都可以用于构造至少两种类型。
+
+泛型类的情况就变得更复杂了。要得到一个合法的类型，需要用一个作为类型实参的具体类型替换（泛型）类的类型形参。List不是一个类型（它是一个类），List<Int>，List<String?>等才是合法的类型。每一个泛型类都可能生出潜在的无限数量的类型。
+
+*子类型*：任何时候若需要的是类型A的值，都能够使用类型B的值（当作A的值），类型B就是类型A的子类型。
+
+任何类型都可以被认为是它自己的子类型。
+
+*超类型*是子类型的反义词。若A是B的子类型，那么B就是A的超类型。
+
+```
+fun test(i: Int) {
+    val n: Number = i // 编译通过，因为Int是Number的子类型
+
+    fun foo(s: Stirng) {...}
+    foo(i)// 不能编译，因为Int不是String的子类型
+}
+```
+
+只有值的类型是变量类型的子类型时，才允许变量存储该值。只有当表达式的类型是函数参数的类型的子类型时，才允许把该表达式传给函数。
+
+简单的情况下，子类型和子类本质上以为着一样的事物。
+
+可空类型提供了一个例子，说明子类型和子类不是同一个事物：非空类型A是可空类型A的子类型，但反过来却不是。
+
+一个非空类型是它的可空版本的子类型，但它们都对应着同一个类。
+
+一个泛型类——若对于任意两种类型A和B，`MutableList<A>`既不是`MutableList<B>`的子类型也不是它的超类型，它就被称为在该类型参数上是*不变型的*。
+
+*Java中所有的类都是不变型的*。
+
+### 协变：保留子类型化关系
+
+一个协变类是一个泛型类（以`List<T>`为例），若A是B的子类型，那么`List<A>`就是`List<B>`的子类型。*子类型化被保留了。*
+
+List，对于它来说，子类型化规则不一样。Kotlin中的List接口表示的是只读集合，若A是B的子类型，那么`List<A>`就是`List<B>`的子类型。这样的类或者接口被称为*协变的*。
+
+在Kotlin中，要声明类在某个类型参数上是可以协变的，在该类型参数的名称前加上*out关键字*：
+
+```
+interface Producer<out T> {
+    fun produce(): T
+}
+```
+
+将一个类的类型参数标记为协变的，在*该类型实参没有精确匹配到函数中定义的类型形参时*，可以让该类的值作为这些函数的实参传递，也可以作为这些函数的返回值。
+
+例如，有这样一个函数，负责喂养类Herd代表的一群动物（畜群），Herd类的类型参数确定了畜群中动物的类型：
+
+```
+// 定义一个不变型的类似集合的类
+open class Animal {
+    fun feed() {...}
+}
+
+class Herd<T : Animal> {
+    val size: Int get() = ...
+    operator fun get(i: Int): T {...}
+}
+
+fun feedAll(animals: Herd<Animal>) {
+    for(i in 0 until animals.size) {
+        animals[i].feed()
+    }
+}
+
+// 使用一个不变型的类似集合的类（假设用户有一群猫需要照顾）
+class Cat : Animal {
+    fun cleanLitter() {...}
+}
+
+fun takeCareOfCats(cats: Herd<Cat>) {
+    for(i in 0 until cats.size) {
+        cats[i].cleanLitter()
+    }
+    feedAll(cats) // 错误：推导的类型是Herd<Cat>，但期望的是Herd<Animal>
+}
+```
+
+这群猫要挨饿了。因为Herd类中的类型参数T没有用任何变型修饰符，猫群不是畜群的子类。可以使用显式的类型转换来绕过这个问题，但是这种方法啰嗦，易出错，而且几乎从来都不是解决类型不匹配问题的正确方式。
+
+```
+// 使用一个协变的类似集合的类
+class Herd<out T : Animal> {
+    ...
+}
+
+fun takeCareOfCats(cats: Herd<Cat>) {
+    for(i in 0 until cats.size) {
+        cats[i].cleanLitter()
+    }
+    feedAll(cats) // 不需要类型转换
+}
+```
+
+不能把任何类都变成协变的：这样不安全。让类在某个类型参数变为协变，限制了该类中对该类型参数使用的可能性。要保证类型安全，他们只能用在所谓的*out位置*，意味着这个类*只能生产类型T的值而不能消费它们*。
+
+在类成员的声明中类型参数的使用分为*in位置*和*out位置*。
+
+一个类，它声明了一个类型参数T并包含了一个使用T的函数。若函数是把T当成返回类型，它在out位置。这种情况下，该函数生产类型为T的值。若T用在函数参数的类型，它在in位置。这样的函数消费类型为T的值：
+
+```
+interface Transform<T> {
+    fun transform(t: T) : T
+}                   ^     ^
+                    |     |
+                “in”位置  “out”位置
+```
+
+类的类型参数前的out关键字要求所有使用T的方法只能把T放在out位置而不能放在in位置。这个关键字约束了使用T的可能性，这保证了对应子类型关系的安全性。
+
+Herd类只在一个地方使用了类型参数T：get方法的返回值：
+
+```
+class Herd<T : Animal> {
+    val size: Int get() = ...
+    operator fun get(i: Int): T {...}
+}
+```
+
+这是一个out位置，可以安全地把类声明成协变的。若Herd<Animal>类的get方法返回的是Cat，任何调用该方法的代码都可以正常工作，因为Cat是Animal的子类型。
+
+类型参数T上的关键字out有两层含义：
+
+1. 子类型化被保留（Herd<Cat>是Herd<Animal>的子类型）
+2. T只能用在out位置
+
+Kotlin的List是只读的，所以它只有一个返回类型为T的元素的方法get，而没有定义任何把类型为T的元素存储到列表中的方法。因此，它也是协变的。
+
+*注意：类型形参不光可以直接当作参数类型或者返回类型使用，还可以当作另一个类型的类型实参。*
+
+```
+interface List<out T> : Collection<T> {
+    fun subList(formIndex: Int, toIndex: Int) : List<T> // 这里的T也在out位置
+}
+```
+
+不能把MutableList<T>在它的类型参数上声明为协变的。因为它含有接收类型为T的值作为参数的方法，也含有返回这种值的方法（因此，T出现在in和out两种位置上）。
+
+编译器强制实施了这种限制。若MutableList<T>类被声明成协变的，编译器会报错。
+
+*注意：构造方法的参数既不在in位置，也不在out位置*。即使类型参数声明成了out，仍然可以在构造方法参数的声明中使用它：
+
+```
+class Herd<out T : Animal>(vararg animals: T) {...}
+```
+
+若把类的实例当成一个更泛化的类型的实例使用，变型会防止该实例被误用：不能调用存在潜在危险的方法。构造方法不是那种在实例创建之后还能调用的方法，因此它不会有潜在危险。
+
+对只读属性来说，类型参数用在了out位置，而可变属性在out位置和in位置都使用了它：
+
+```
+class Herd<T : Animal>(var leadAnimal: T, vararg animals: T){...}
+```
+
+这是，T不能用out标记，因为类包含属性leadAnimal的setter，它在in位置用到了T。
+
+位置规则只覆盖了类外部可见的（public，protected，internal）API。私有方法的参数既不在in位置也不在out位置。变型规则只会防止外部使用者对类的误用但不会对类自己的实现起作用：
+
+```
+class Herd<out T : Animal>(private var leadAnimal: T, vararg animals: T){...}
+```
+
+现在可以安全地让Herd在T上协变，因为属性leadAnimal变成了私有的。
+
+### 逆变：反转子类型化关系
+
+逆变可以看成是协变的镜像：对一个逆变类来说，它的子类型关系与用作类型实参的类的子类型化关系是相反的。
+
+```
+interface Comparator<in T> {
+    fun compare(e1: T, e2: T): Int {...} // 在in位置使用T
+}
+```
+
+这个接口方法只是在消费类型为T的值。这说明T只在in位置使用，因此它的声明之前用了in关键字。
+
+一个为特定类型的值定义的比较器显然可以比较该类型任意子类型的值：
+
+```
+val anyComparator = Comparator<Any> {
+    e1, e2 -> e1.hashCode() - e2.hashCode()
+}
+
+val strings: List<String> = ...
+
+strings.sortedWith(anyComparator)
+```
+
+sortedWith函数期望一个`Comparator<String>`，传给它一个能比较更一般的类型的比较器是安全的。要在特定类型的对象上执行比较，可以使用能处理该类型或者它的超类型的比较器。这说明`Comparator<Any>`是`Comparator<String>`的子类型，其中Any是String的超类型。*不同类型之间的子类型关系和这些类型的比较器之间的子类型化关系截然相反*。
+
+一个在类型参数上逆变的类是这样一个泛型：若B是A的子类型，那么`Comsumer<A>`就是`Comsumer<B>`的子类型。
+
+in关键字的意思是，对应类型的值是传递进来给这个类的方法的，并且被这些方法消费。和协变的情况类似，约束类型参数的使用将导致特定的子类型化关系。
+
+|协变|逆变|不变型|
+|---|---|-----|
+|`Producer<out T>`|`Consumer<in T>`|`MutableList<T>`|
+|类的子类型化保留了：|子类型化被反转了：|
+|`Producer<Cat>`是`Producer<Animal>`的子类型|`Consumer<Animal>`是`Consumer<Cat>`的子类型|没有子类型化|
+|T只能在out位置|T只能在in位置|T可以在任何位置|
+
+一个类可以在类型参数上协变，同时在另外一个类型参数上逆变：
+
+```
+interface Function1<in P, out R> {
+    operator fun invoke(p: P): R
+}
+```
+
+Kotlin的表示法`(P) -> R`是表达式的另一种更具可读性的形式。
+
+### 使用点变型：在类型出现的地方指定类型
+
+在类声明的时候就能够指定变型修饰符是很方便的，因为这些修饰符会应用到所有类被使用的地方。这称为*声明点变型*。
+
+在Java中，每一次使用带类型参数的类型的时候，还可以指定这个类型参数是否可以用它的子类型或者超类型替换，这叫做*使用点变型*。
+
+在声明时一次性指定变型让代码变得简洁和优雅得多。
+
+Kotlin支持使用点变型，允许在类型参数出现的具体位置指定变型，即使在类型声明时它不能被声明成协变或逆变。
+
+```
+// 带不变型类型参数的数据拷贝函数
+fun <T> copyData(source: MutableList<T>, destination: MutableList<T>) {
+    for (item in source) {
+        destination.add(item)
+    }
+}
+```
+
+尽管两个集合都拥有不变型的类型，来源集合只是读取，而目标集合只是用于写入。这是，集合元素的类型不需要精确匹配。
+
+要让这个函数支持不同类型的列表，可以引入第二个泛型参数：
+
+```
+// 带不变型类型参数的数据拷贝
+fun <T : R, R> copyData(source: MutbaleList<T>, destination: MutableList<R>) {
+    ...
+}
+```
+
+声明了两个泛型参数代表来源列表和目标列表中的元素类型。为了能够把一个列表中的元素拷贝到另一个列表中，来源元素类型应该是目标列表中的元素的子类型。
+
+Kotlin提供了一种更优雅的表达方式。当函数的实现调用了那些类型参数只出现在out位置（或只出现在in位置）的方法时，可以充分利用这一点，在函数定义中给特定用途的类型参数加上变型修饰符：
+
+```
+fun <T> copyData(source: MutableList<out T>, destionation: MutableList<T>)
+```
+
+可以为类型声明中类型参数任意的用法指定变型修饰符。包括：形参类型，局部变量类型，函数返回类型等等。这里发生的一切被称为*类型投影*：source不是一个常规的MutableList，而是一个*投影*（受限）的MutableList。只能调用返回类型是泛型类型参数的那些方法，或者严格的讲，只在out位置使用它的方法。编译器禁止调用使用类型参数做实参（类型）的那些方法（在in位置使用类型参数）：
+
+```
+val list: MutableList<out Number> = ...
+list.add(42) ---> ERROR
+```
+
+不要为使用投影类型后不能调用某些方法而吃惊。若需要调用那些方法，要用的是常规类型而不是投影。
+
+若类型参数已经有out变型，获取它的out投影没有任何意义。`List<out T>`和`List<T>`是一个意思，因为List已经声明成了`class List<out T>`，编译器会发出警告，表明这样的投影是多余的。
+
+Kotlin的使用点变型直接对应Java的限界通配符。in投影的`MutableList<in T>`对应到Java的`MutableList<? super T>`。
+
+使用点变型有助于放宽可接收的类型的范围。
+
+### 星号投影：使用\*代替类型参数
+
+*星号投影*可以表明*不知道关于泛型实参的任何信息*。
+
+因为不知道哪个类型，不能向列表中写入任何东西，因为写入的任何值都可能会违反调用代码的期望。但是从列表中读取元素是可行的，因为心里有数，所有的存储在列表中的值都能匹配所有Kotlin类型的超类型Any?：
+
+```
+val list : MutableList<Any?> = mutableListOf("abc",1,'a')
+val chars = mutableListOf('a','b','c')
+val unknownElements: MutableList<*> = if(Random().nextBoolean()) list else chars
+
+unknownElements.add(42) // ERROR，编译器禁止调用这个方法
+
+println(unknownElements.first()) // 读取元素时安全的。
+```
+
+编译器把`MutableList<*>`当成了out投影的类型：没有任何元素类型信息的时候，读取Any?类型的元素时安全的，但是向列表中写入元素是不安全的。
+
+当类型实参的信息并不重要的时候，可以使用星号投影的语法：不需要使用任何在签名中引用类型参数的方法，或者只是读取数据而不关心它的具体类型：
+
+```
+fun printlFirst(list: List<*>) {
+    if(list.isNotEmpty()) {
+        println(list.first())
+    }
+}
+```
+
+星号投影的语法很简洁，但只能用在对泛型类型实参的确切值不感兴趣的地方：只是使用生产值的方法，而且不关心那些值的类型。
+
+假设需要验证用户的输入，并声明了一个借口FieldValidator。它只包含在in位置的类型参数，所以声明成了逆变的。还声明了两个验证器来分别处理String和Int：
+
+```
+interface FieldValidator<in T> {
+    fun validate(input T): Boolean
+}
+
+object StringValidator : FieldValidator<String> {
+    override fun validate(input: String) = input.isNotEmpty()
+}
+object IntValidator : FieldValidator<Int> {
+    override fun validate(input: Int) = input > 0
+}
+```
+
+现在要把所有的验证器都保存到同一个容器中，根据输入的类型来选出正确的验证器。用map来存储它们，存储任意类型的验证器，声明了KClass带`FieldValidator<*>`的map：
+
+```
+val validators = mutableMapOf<KClass<*>, FieldValidator<*>>()
+validators[String::class] = StringValidator
+validators[Int::class] = IntValidator
+```
+
+但是这样写完之后，尝试使用验证器的时候遇到了困难：不能用类型为`FieldValidator<*>`的验证器来验证字符串，这是不安全的。
+
+```
+validators[String::class]!!.validate("abc") // ERROR
+```
+
+把具体类型的值传给未知类型的验证器是不安全的。一种修正的方法是把验证器显式地转换成需要的类型：
+
+```
+val stringValidator = validators[String::class] as FieldValidator<String>
+stringValidator.validate("")
+```
+
+编译器发出了未受检转换的警告。尽管如此，这段代码只有在验证时可能失败，而不是转换时，因为运行时所有的泛型信息都被擦除了。
+
+```
+val stringValidator = validators[Int::class] as FieldValidator<String> 
+stringValidator.validate("") // ERROR
+```
+
+上面的代码得到了一个错误的验证器（可能是不小心），但代码可以编译，知道使用验证器时才会发现真正的错误。
+
+这种解决方法不是类型安全的，而且容易出错，所以，若要把不同类型的验证器存储在同一个地方，需要研究其他的选择。
+
+```
+// 封装对验证器集合的访问
+object Validators {
+    private val validators = mutbaleList<KClass<*>, FieldValidator<*>>()
+
+    fun <T: Any> registerValidator(kClass: KClass<T>, fieldValidator: FieldValidator<T>) {
+        validators[kClass] = fieldValidator
+    }
+
+    operator fun <T: Any> get(kClass: KClass<T>) : FieldValidator<T> = 
+        validators[kClass] as? FieldValidator<T> ?: throw IllegalArgumentException("No validator for ${kClass.simpleName}")
+}
+
+Validators.registerValidator(String::class,StringValidator)
+Validators.registerValidator(Int::class,IntValidator)
+
+Validators[String::class].validate("Kotlin")
+Validators[Int::class].validate(32)
+```
+
+所有不安全的逻辑都被隐藏在类的主体中，通过把这些逻辑局部化，保证了它不会被错误地使用。编译器禁止使用错误的验证器，因为Validators对象始终会给出正确的验证器实现。
+
+这种模式可以推广到任意自定义泛型类的存储。把不安全的代码局部化到一个分开的位置预防了误用，而且让容器的使用变得安全。
+
+## 总结
+
+* Kotlin的泛型和Java相当接近：它们使用同样的方式声明泛型函数和泛型类。
+
+* 和Java一样，泛型类型的类型实参只在编译期存在。
+
+* 不能把带类型实参的类型和is运算符一起使用，因为类型实参在运行时将被擦除。
+
+* 内联函数的类型参数可以标记成实化的，允许在运行时对它们使用is检查，以及获取java.lang.Class实例。
+
+* 变型是一种说明两种拥有相同基础类型和不同类型参数的泛型类型之间子类型化关系的方式。它说明了若其中一个泛型类型的类型参数是另一个类型参数的子类型，这个泛型类型就是另外一个泛型类型的子类型或者超类型。
+
+* 可以声明一个类在某个类型参数上是协变的，若该参数只出现在out位置。
+
+* 逆变的情况正好相反：可以声明一个类在某个类型参数上是逆变的，若该参数只出现在in位置。
+
+* Kotlin中的只读接口List声明成了协变的，这意味着`List<String>`是`List<Any>`的子类型。
+
+* 函数接口声明成了在第一个类型参数上逆变而在第二个类型参数上协变，使`(Animal) -> Int`成为`(Cat) -> Number`的子类型。
+
+* 在Kotlin中既可以为整个泛型类指定类型（声明点变型），也可以为泛型类型特定的使用指定变型（使用点变型）
+
+* 当确切的类型实参时未知的或者不重要的时候，可以使用星号投影语法。
