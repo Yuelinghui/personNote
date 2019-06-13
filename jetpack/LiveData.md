@@ -24,8 +24,8 @@ liveData.observe(this,Observer{data->
 
 ## 更新LiveData
 
-LiveData
+`LiveData`没有更新数据的方法，`MutableLiveData`可以使用*postValue(T)*和*setValue(T)*的方法更新持有的数据
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTIyNzE5NTE3OCw1NTA0NjIyODksNzI4Nj
+eyJoaXN0b3J5IjpbMTM0OTI3OTA2OSw1NTA0NjIyODksNzI4Nj
 czNTg1XX0=
 -->
