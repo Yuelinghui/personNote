@@ -49,7 +49,27 @@ class  MyActivity  :  AppCompatActivity()  {
 
 `activity`中的两个或多个`fragment`需要相互通信是很常见的。
 
-可以使用`ViewModel`对象解决这个常见的问题。这些`fragment`可以使用ViewModel来处理此通信
+可以使用`ViewModel`对象解决这个常见的问题。这些`fragment`可以使用其`activity`范围内共享的`ViewModel`来处理通信
+
+```
+class  SharedViewModel  :  ViewModel()  { 
+	val selected =  MutableLiveData<Item>()  
+	fun select(item:  Item)  { 
+		selected.value = item 
+	}  
+}  
+  
+class  MasterFragment  :  Fragment()  {  
+private lateinit var itemSelector:  Selector  
+private lateinit var model:  SharedViewModel  
+override  fun onCreate(savedInstanceState:  Bundle?)  {  
+	super.onCreate(savedInstanceState) 
+	model = activity?.run {  ViewModelProviders.of(this).get(SharedViewModel::class.java)  }  ?:  throw  Exception("Invalid Activity") itemSelector.setOnClickListener { item ->  // Update the UI  }  }  
+}  
+  
+class  DetailFragment  :  Fragment()  {  private lateinit var model:  SharedViewModel  override  fun onCreate(savedInstanceState:  Bundle?)  {  super.onCreate(savedInstanceState) model = activity?.run {  ViewModelProviders.of(this).get(SharedViewModel::class.java)  }  ?:  throw  Exception("Invalid Activity") model.selected.observe(this,  Observer<Item>  { item ->  // Update the UI  })  }  
+}
+```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTg4NTI5NTk2MCw2NDc1Mzg4NTRdfQ==
+eyJoaXN0b3J5IjpbNjU1Njk2MzA1LDY0NzUzODg1NF19
 -->
