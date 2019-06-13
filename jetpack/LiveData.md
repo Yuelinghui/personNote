@@ -39,8 +39,18 @@ val userName:  LiveData<String>  =  Transformations.map(userLiveData)  { user ->
 }
 ```
 
+## 使用MediatorLiveData
 
+`MediatorLiveData`可以监听其他的`LiveData`对象并处理它们变动发出的事件
+
+`MediatorLiveData`是`LiveData`的子类，允许合并多个`LiveData`源。只要任何原始`LiveData`源对象发生更改，就会触发`MediatorLiveData`对象的观察者
+
+```
+mediatorLiveData.addSource(liveData) { data->
+// 参数data就是LiveData对象变动的最新数值
+}
+```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTAzMjczMzY3NiwtMjEzMzA4NjEzLDU1MD
-Q2MjI4OSw3Mjg2NzM1ODVdfQ==
+eyJoaXN0b3J5IjpbMTMxMTEwOTg1LC0yMTMzMDg2MTMsNTUwND
+YyMjg5LDcyODY3MzU4NV19
 -->
