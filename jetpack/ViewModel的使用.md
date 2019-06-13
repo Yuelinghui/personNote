@@ -98,7 +98,7 @@ override  fun onCreate(savedInstanceState:  Bundle?)  {
 ```
 class MyViewModel(application:Application):ViewModel()
 
-class MyViewModelFactory(application:Application):ViewModelProvider.NewInstanceFactory {
+class MyViewModelFactory(application:Application):ViewModelProvider.Factory {
 	
 	fun <T extends ViewModel>  create(Class<T> modelClass):T {
         if (modelClass == MyViewModel.class) {
@@ -109,6 +109,6 @@ class MyViewModelFactory(application:Application):ViewModelProvider.NewInstanceF
 }
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTExMjgzMzgyNTAsLTE3ODA2NzEzMDQsNj
-Q3NTM4ODU0XX0=
+eyJoaXN0b3J5IjpbMTU1MzMyNTE3OSwtMTc4MDY3MTMwNCw2ND
+c1Mzg4NTRdfQ==
 -->
