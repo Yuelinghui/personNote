@@ -107,8 +107,16 @@ class MyViewModelFactory(application:Application):ViewModelProvider.Factory {
         return null;
     }
 }
+
+class MyActivity:Activity {
+
+	onCreate() {
+		myViewModel = ViewModelProviders.of(this,MyViewModelFactory)
+	}
+
+}
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTU1MzMyNTE3OSwtMTc4MDY3MTMwNCw2ND
-c1Mzg4NTRdfQ==
+eyJoaXN0b3J5IjpbNTA0Mzk2MTcwLC0xNzgwNjcxMzA0LDY0Nz
+UzODg1NF19
 -->
