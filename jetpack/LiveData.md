@@ -12,7 +12,12 @@ LiveData是一个可观察的数据持有者，它可以感知生命周期，只
 * 当*configuration change*发生时，可以收到最新的数据
 * 资源共享（可以使用单例模式扩展LiveData对象以包装系统服务，以便可以在应用程序中共享它们。LiveData对象连接到系统服务一次，然后任何需要该资源的观察者都可以只观看LiveData对象）
 
+## 观察LiveData对象
 
+```
+
+```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNTUwNDYyMjg5LDcyODY3MzU4NV19
+eyJoaXN0b3J5IjpbLTE3NTIwOTY2MzIsNTUwNDYyMjg5LDcyOD
+Y3MzU4NV19
 -->
