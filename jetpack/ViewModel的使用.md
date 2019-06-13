@@ -47,7 +47,9 @@ class  MyActivity  :  AppCompatActivity()  {
 
 ## 在fragment中间共享数据
 
+`activity`中的两个或多个`fragment`需要相互通信是很常见的。
 
+可以使用`ViewModel`对象解决这个常见的问题。这些`fragment`可以使用ViewModel来处理此通信
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTc3MDEwMjY5OCw2NDc1Mzg4NTRdfQ==
+eyJoaXN0b3J5IjpbLTg4NTI5NTk2MCw2NDc1Mzg4NTRdfQ==
 -->
