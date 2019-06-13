@@ -4,7 +4,7 @@
 
 当系统销毁并重建`activity`的时候，可能和UI相关的数据会消失，比如`configuration changes`(例如旋转屏幕)造成的`activity`重建。当然，我们可以在`onSaveInstanceState()`和`onCreate`的时候存储和恢复数据，但是这个只对可序列化的数据有效，而且数据量大的话不建议使用
 
-
+另一个问题是UI控制器经常需要进行需要一些时间才能返回的异步调用（例如网络请求数据）。UI控制器需要管理这些调用并确保系统在销毁后清理它们以避免潜在的内存泄漏。此管理需要大量维护，并且在为配置更改重新创建对象的情况下，这会浪费资源，因为对象可能必须重新发出已经进行的调用。
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMzM3OTM1ODgzLDY0NzUzODg1NF19
+eyJoaXN0b3J5IjpbLTEzMDQ5NjY1NDEsNjQ3NTM4ODU0XX0=
 -->
