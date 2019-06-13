@@ -111,12 +111,12 @@ class MyViewModelFactory(application:Application):ViewModelProvider.Factory {
 class MyActivity:Activity {
 
 	onCreate() {
-		myViewModel = ViewModelProviders.of(this,MyViewModelFactory)
+		myViewModel = ViewModelProviders.of(this,MyViewModelFactory(application)).get(MyViewModel::class)
 	}
 
 }
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNTA0Mzk2MTcwLC0xNzgwNjcxMzA0LDY0Nz
-UzODg1NF19
+eyJoaXN0b3J5IjpbLTE3MTI0NTc1MTYsLTE3ODA2NzEzMDQsNj
+Q3NTM4ODU0XX0=
 -->
