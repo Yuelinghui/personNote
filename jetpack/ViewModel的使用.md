@@ -91,8 +91,10 @@ override  fun onCreate(savedInstanceState:  Bundle?)  {
 * 除了`SharedViewModel`的接口方法之外，`fragment`不需要彼此了解。如果其中一个`fragment`消失，另一个`fragment`继续照常工作
 * 每个`fragment`都有自己的生命周期，不受另一个`fragment`的生命周期的影响。如果一个`fragment`替换另一个`fragment`，则UI继续工作而没有任何问题
 
-## 
+## 使用ViewModelProvider.Factory
+
+我们看到，使用`ViewModel`在初始化的时候是没有参数的，如果我们想在`ViewModel`初始化的时候加入入参，就要使用`ViewModelP`
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbODY0MjA3OTY0LC0xNzgwNjcxMzA0LDY0Nz
-UzODg1NF19
+eyJoaXN0b3J5IjpbLTE5NjE4NTE1NTksLTE3ODA2NzEzMDQsNj
+Q3NTM4ODU0XX0=
 -->
