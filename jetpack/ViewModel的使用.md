@@ -39,7 +39,7 @@ class  MyActivity  :  AppCompatActivity()  {
 }
 ```
 
-注意： **ViewModel绝不能引用视图，生命周期或任何可能包含对活动上下文的引用的类**
+注意： **ViewModel绝不能引用View，Lifecycle或任何可能包含对`activity`的`context`引用的类**
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTAxMTg3NTQ3Niw2NDc1Mzg4NTRdfQ==
+eyJoaXN0b3J5IjpbOTY1MDQxOTMzLDY0NzUzODg1NF19
 -->
