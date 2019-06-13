@@ -24,8 +24,10 @@ liveData.observe(this,Observer{data->
 
 ## 更新LiveData
 
-`LiveData`没有更新数据的方法，`MutableLiveData`可以使用*postValue(T)*和*setValue(T)*的方法更新持有的数据
+`LiveData`没有更新数据的方法，`MutableLiveData`可以使用**postValue(T)**和**setValue(T)**的方法更新持有的数据
+
+在主线程中调用*setValue(T)*方法以从主线程更新LiveData对象。如果代码在工作线程中执行，则可以使用postValue（T）方法来更新LiveData对象。
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTM0OTI3OTA2OSw1NTA0NjIyODksNzI4Nj
-czNTg1XX0=
+eyJoaXN0b3J5IjpbNzE1MDUyNTgsNTUwNDYyMjg5LDcyODY3Mz
+U4NV19
 -->
