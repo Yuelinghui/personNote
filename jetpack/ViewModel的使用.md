@@ -99,17 +99,16 @@ override  fun onCreate(savedInstanceState:  Bundle?)  {
 class MyViewModel(application:Application):ViewModel()
 
 class MyViewModelFactory(application:Application):ViewModelProvider.NewInstanceFactory {
-
-```
-public <T extends ViewModel>  create(@NonNull Class<T> modelClass) {
-        if (modelClass == BListViewModel.class) {
-            return (T) new BListViewModel(application, id);
+	
+	fun <T extends ViewModel>  create(Class<T> modelClass):T {
+        if (modelClass == MyViewModel.class) {
+            return new MyViewModel(application) as T;
         }
         return null;
     }
-```
+}
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE4MTkxNTg3MjksLTE3ODA2NzEzMDQsNj
+eyJoaXN0b3J5IjpbLTExMjgzMzgyNTAsLTE3ODA2NzEzMDQsNj
 Q3NTM4ODU0XX0=
 -->
