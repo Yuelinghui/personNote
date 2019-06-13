@@ -27,7 +27,20 @@ liveData.observe(this,Observer{data->
 `LiveData`没有更新数据的方法，`MutableLiveData`可以使用*postValue(T)* 和 *setValue(T)* 的方法更新持有的数据
 
 在主线程中调用 *setValue(T)* 方法更新LiveData对象。如果代码在子线程中执行，则可以使用 *postValue(T)* 方法来更新LiveData对象
+
+## 变换LiveData
+
+可能希望在将LiveData对象分派给观察者之前更改存储在LiveData对象中的值，或者可能需要根据另一个LiveData对象的值返回不同的LiveData实例。Lifecycle包提供**Transformations**类
+
+```
+val userLiveData:  LiveData<User>  =  UserLiveData()  
+val userName:  LiveData<String>  =  Transformations.map(userLiveData)  { user ->
+	"${user.name} ${user.lastName}"  
+}
+```
+
+
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTIxMzMwODYxMyw1NTA0NjIyODksNzI4Nj
-czNTg1XX0=
+eyJoaXN0b3J5IjpbMTAzMjczMzY3NiwtMjEzMzA4NjEzLDU1MD
+Q2MjI4OSw3Mjg2NzM1ODVdfQ==
 -->
