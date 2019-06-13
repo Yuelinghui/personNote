@@ -84,6 +84,11 @@ override  fun onCreate(savedInstanceState:  Bundle?)  {
 }  
 }
 ```
+
+这种方法具有以下优点：
+
+* `activiy`不需要做任何事情，也不需要了解这种沟通
+* 除了`SharedViewModel`的接口方法之外，`fragment`不需要彼此了解。如果其中一个`fragment`消失，另一个`f`继续照常工作。
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTEzMTk1NzcxNTUsNjQ3NTM4ODU0XX0=
+eyJoaXN0b3J5IjpbLTUwNDIxMDI1Nyw2NDc1Mzg4NTRdfQ==
 -->
