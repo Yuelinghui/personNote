@@ -62,14 +62,28 @@ class  SharedViewModel  :  ViewModel()  {
 class  MasterFragment  :  Fragment()  {  
 private lateinit var itemSelector:  Selector  
 private lateinit var model:  SharedViewModel  
+
 override  fun onCreate(savedInstanceState:  Bundle?)  {  
 	super.onCreate(savedInstanceState) 
-	model = activity?.run {  ViewModelProviders.of(this).get(SharedViewModel::class.java)  }  ?:  throw  Exception("Invalid Activity") itemSelector.setOnClickListener { item ->  // Update the UI  }  }  
+	model = activity?.run {  ViewModelProviders.of(this).get(SharedViewModel::class.java)  }  ?:  throw  Exception("Invalid Activity") 
+	itemSelector.setOnClickListener { item ->  
+		// Update the UI  
+	}  
+}  
 }  
   
-class  DetailFragment  :  Fragment()  {  private lateinit var model:  SharedViewModel  override  fun onCreate(savedInstanceState:  Bundle?)  {  super.onCreate(savedInstanceState) model = activity?.run {  ViewModelProviders.of(this).get(SharedViewModel::class.java)  }  ?:  throw  Exception("Invalid Activity") model.selected.observe(this,  Observer<Item>  { item ->  // Update the UI  })  }  
+class  DetailFragment  :  Fragment()  {  
+private lateinit var model:  SharedViewModel  
+
+override  fun onCreate(savedInstanceState:  Bundle?)  {  
+	super.onCreate(savedInstanceState) 
+	model = activity?.run {  ViewModelProviders.of(this).get(SharedViewModel::class.java)  }  ?:  throw  Exception("Invalid Activity") 
+	model.selected.observe(this,  Observer<Item>  { item ->  
+		// Update the UI  
+	})  
+}  
 }
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNjU1Njk2MzA1LDY0NzUzODg1NF19
+eyJoaXN0b3J5IjpbLTEzMTk1NzcxNTUsNjQ3NTM4ODU0XX0=
 -->
