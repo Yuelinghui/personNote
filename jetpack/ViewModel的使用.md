@@ -22,8 +22,22 @@ private  fun loadUsers()  {
 // Do an asynchronous operation to fetch users.  
 }
 ```
+```
+class  MyActivity  :  AppCompatActivity()  {  
 
+override  fun onCreate(savedInstanceState:  Bundle?)  {  
 
+// Create a ViewModel the first time the system calls an activity's onCreate() method. 
+// Re-created activities receive the same MyViewModel instance created by the first activity.  
+
+val model =  ViewModelProviders.of(this).get(MyViewModel::class.java) 
+
+model.getUsers().observe(this,  Observer<List<User>>{ users ->  
+	// update UI 
+})  
+}  
+}
+```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbOTA5NjI2MzMxLDY0NzUzODg1NF19
+eyJoaXN0b3J5IjpbLTU0Nzk3NjIyLDY0NzUzODg1NF19
 -->
