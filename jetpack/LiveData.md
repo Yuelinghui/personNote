@@ -16,12 +16,16 @@ LiveData是一个可观察的数据持有者，它可以感知生命周期，只
 
 ```
 liveData.observe(this,Observer{data->
-// 数据的回调
+// 数据变动的回调
 })
 ```
 
-方法里的`this`就是`LifecycleOne`
+方法里的`this`就是`LifecycleOwner`对象，比如`activity`，`fragment`等
+
+## 更新LiveData
+
+LiveData
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE1MjY0NzE3MzksNTUwNDYyMjg5LDcyOD
-Y3MzU4NV19
+eyJoaXN0b3J5IjpbMTIyNzE5NTE3OCw1NTA0NjIyODksNzI4Nj
+czNTg1XX0=
 -->
