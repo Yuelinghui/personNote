@@ -25,19 +25,21 @@ private  fun loadUsers()  {
 ```
 class  MyActivity  :  AppCompatActivity()  {  
 
-override  fun onCreate(savedInstanceState:  Bundle?)  {  
+	override  fun onCreate(savedInstanceState:  Bundle?)  {  
 
-// Create a ViewModel the first time the system calls an activity's onCreate() method. 
-// Re-created activities receive the same MyViewModel instance created by the first activity.  
+		// Create a ViewModel the first time the system calls an activity's onCreate() method. 
+		// Re-created activities receive the same MyViewModel instance created by the first activity.  
 
-val model =  ViewModelProviders.of(this).get(MyViewModel::class.java) 
+		val model =  ViewModelProviders.of(this).get(MyViewModel::class.java) 
 
-model.getUsers().observe(this,  Observer<List<User>>{ users ->  
-	// update UI 
-})  
-}  
+		model.getUsers().observe(this,  Observer<List<User>>{ users ->  
+			// update UI 
+		})  
+	}  
 }
 ```
+
+注意： **ViewModel绝不能引用视图，生命周期或任何可能包含对活动上下文的引用的类**
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTU0Nzk3NjIyLDY0NzUzODg1NF19
+eyJoaXN0b3J5IjpbMTAxMTg3NTQ3Niw2NDc1Mzg4NTRdfQ==
 -->
