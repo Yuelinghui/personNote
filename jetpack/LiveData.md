@@ -6,7 +6,8 @@ LiveData是一个可观察的数据持有者，它可以感知生命周期，只
 
 * 确保UI符合数据状态
 * 不会有内存泄漏（观察者绑定到生命周期对象，当生命周期destroy的时候会自行清理）
-* 不会因activity的`stopped`而引起崩溃（当activity `stop`）
+* 不会因activity的`stopped`而引起崩溃（当activity `stopped`之后，观察者不会收到数据变动信息）
+* 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTIwNDU4NzI4NjAsNzI4NjczNTg1XX0=
+eyJoaXN0b3J5IjpbODc5MDIzNjg5LDcyODY3MzU4NV19
 -->
