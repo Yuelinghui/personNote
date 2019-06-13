@@ -45,7 +45,9 @@ class  MyActivity  :  AppCompatActivity()  {
 
 获取`ViewMode`l时，`ViewModel`对象的生命周期为传递给`ViewModelProvider`的`this`的生命周期。`ViewModel`保留在内存中，直到它的作用域生命周期永久消失：在`activity`的情况下，是`finished`，在`fragment`的情况下，是`detached`
 
+## 在fragment中间共享数据
+
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTIwMTYyMzIwNSw2NDc1Mzg4NTRdfQ==
+eyJoaXN0b3J5IjpbMTc3MDEwMjY5OCw2NDc1Mzg4NTRdfQ==
 -->
