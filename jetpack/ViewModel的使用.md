@@ -7,12 +7,23 @@
 另一个问题是UI控制器经常需要进行需要一些时间才能返回的异步调用（例如网络请求数据）。UI控制器需要管理这些调用并确保`activity`或者`fragment`在销毁后清理它们以避免潜在的内存泄漏。这种管理需要大量维护，并且在重新创建对象的情况下，这会浪费资源，因为对象可能必须重新发出已经进行的调用。
 
 
-## sh
+## 使用ViewModel
 `ViewModel`对象在`configuration changes`时自动保留，以便它们保存的数据可立即用于下一个`activity`或`fragment`
 
 ```
+class  MyViewModel  :  ViewModel()  {  
+private  val users:  MutableLiveData<List<User>> by lazy {  MutableLiveData().also { loadUsers()  }  }  
 
+fun getUsers():  LiveData<List<User>>  {  
+	return users 
+}  
+
+private  fun loadUsers()  {  
+// Do an asynchronous operation to fetch users.  
+}
 ```
+
+
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE5MDM5NTI3OTIsNjQ3NTM4ODU0XX0=
+eyJoaXN0b3J5IjpbOTA5NjI2MzMxLDY0NzUzODg1NF19
 -->
