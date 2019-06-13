@@ -93,8 +93,14 @@ override  fun onCreate(savedInstanceState:  Bundle?)  {
 
 ## 使用ViewModelProvider.Factory
 
-我们看到，使用`ViewModel`在初始化的时候是没有参数的，如果我们想在`ViewModel`初始化的时候加入入参，就要使用`ViewModelP`
+我们看到，使用`ViewModel`在初始化的时候是没有参数的，如果我们想在`ViewModel`初始化的时候加入入参，就要使用`ViewModelProvider.Factory`
+
+```
+class MyViewModel(application:Application):ViewModel()
+
+class MyViewModelFactory(application:Application):
+```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE5NjE4NTE1NTksLTE3ODA2NzEzMDQsNj
-Q3NTM4ODU0XX0=
+eyJoaXN0b3J5IjpbMTMzNDE1NDc5NSwtMTc4MDY3MTMwNCw2ND
+c1Mzg4NTRdfQ==
 -->
