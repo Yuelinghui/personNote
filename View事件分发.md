@@ -1,4 +1,4 @@
-#View的事件分发
+# View的事件分发
 
 啥也别说，先上图
 ![](/assets/view_dispatch.png)
@@ -22,7 +22,7 @@ ViewGroup 和View的这些方法的默认实现就是会让整个事件安装U�
     * 首先看下ViewGroup 的dispatchTouchEvent，之前说的return true是终结传递。return false 是回溯到父View的onTouchEvent，然后ViewGroup怎样通过dispatchTouchEvent方法能把事件分发到自己的onTouchEvent处理呢，return true和false 都不行，那么只能通过Interceptor把事件拦截下来给自己的onTouchEvent，所以ViewGroup dispatchTouchEvent方法的super默认实现就是去调用onInterceptTouchEvent，记住这一点。
     * 那么对于View的dispatchTouchEvent return super.dispatchTouchEvent()的时候呢事件会传到哪里呢，很遗憾View没有拦截器。但是同样的道理return true是终结。return false 是回溯会父类的onTouchEvent，怎样把事件分发给自己的onTouchEvent 处理呢，那只能return super.dispatchTouchEvent,View类的dispatchTouchEvent（）方法默认实现就是能帮你调用View自己的onTouchEvent方法的。
     
-##总结
+## 总结
 
 说了这么多，不知道有说清楚没有，最后总结一下：
 
@@ -61,3 +61,6 @@ ViewGroup 和View的这些方法的默认实现就是会让整个事件安装U�
 
 对于ACTION_MOVE、ACTION_UP总结：**ACTION_DOWN事件在哪个控件消费了（return true）， 那么ACTION_MOVE和ACTION_UP就会从上往下（通过dispatchTouchEvent）做事件分发往下传，就只会传到这个控件，不会继续往下传，如果ACTION_DOWN事件是在dispatchTouchEvent消费，那么事件到此为止停止传递，如果ACTION_DOWN事件是在onTouchEvent消费的，那么会把ACTION_MOVE或ACTION_UP事件传给该控件的onTouchEvent处理并结束传递。**
     
+<!--stackedit_data:
+eyJoaXN0b3J5IjpbMzQ5NDk3NTM1XX0=
+-->
