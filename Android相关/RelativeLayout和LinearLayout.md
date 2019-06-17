@@ -21,11 +21,13 @@ Measure：0.738ms
 Layout：0.176ms  
 draw：7.655ms
 
-** RelativeLayout
+**RelativeLayout**
 
 Measure：2.280ms  
 Layout：0.153ms  
 draw：7.696ms
+
+其实两个ViewGroup的`layout`和`draw`相差不多，考虑到误差基本是不分伯仲，但是`RelativeLayout`的
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE3MzI0OTI5MzldfQ==
+eyJoaXN0b3J5IjpbLTEzMDA3NjQzNDddfQ==
 -->
