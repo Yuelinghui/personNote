@@ -50,8 +50,10 @@ for (int i = 0; i < count; i++) {
       if (child.getVisibility() != GONE) {
         LayoutParams params = (LayoutParams) child.getLayoutParams();
         measureChild(child, params, myWidth, myHeight);
-      }}
+        ...
+      }
+}
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTUyOTUwODEwOF19
+eyJoaXN0b3J5IjpbMTU2NTM4OTg3NF19
 -->
