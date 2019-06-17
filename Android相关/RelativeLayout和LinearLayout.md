@@ -36,18 +36,22 @@ draw：7.696ms
 ```
 ...
 int count = views.length;
- for (int i = 0; i < count; i++) {
+for (int i = 0; i < count; i++) {
       View child = views[i];
       if (child.getVisibility() != GONE) {
 	      ...
           measureChildHorizontal(child, params, myWidth, myHeight);
-
-        if (positionChildHorizontal(child, params, myWidth, isWrapContentWidth)) {
-          offsetHorizontalAxis = true;
-        }
+          ...
       }
     }
+...
+for (int i = 0; i < count; i++) {
+      View child = views[i];
+      if (child.getVisibility() != GONE) {
+        LayoutParams params = (LayoutParams) child.getLayoutParams();
+        measureChild(child, params, myWidth, myHeight);
+      }}
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTEzMDIxMTA0MTJdfQ==
+eyJoaXN0b3J5IjpbLTUyOTUwODEwOF19
 -->
