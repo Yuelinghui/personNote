@@ -95,7 +95,9 @@ public final void measure(int widthMeasureSpec, int heightMeasureSpec) {
   }
 ```
 
+View的measure方法里对绘制过程做了一个优化，如果我们或者我们的子View没有要求强制刷新，而父View给子View的传入值也没有变化（也就是说子View的位置没变化），就不会做无谓的measure。
+
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTExNTQ5MDU0OTRdfQ==
+eyJoaXN0b3J5IjpbNTgxOTM4NTUxLC0xMTU0OTA1NDk0XX0=
 -->
