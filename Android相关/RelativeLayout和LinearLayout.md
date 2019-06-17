@@ -97,7 +97,13 @@ public final void measure(int widthMeasureSpec, int heightMeasureSpec) {
 
 View的measure方法里对绘制过程做了一个优化，如果我们或者我们的子View没有要求强制刷新，而父View给子View的传入值也没有变化（也就是说子View的位置没变化），就不会做无谓的measure。
 
+但是上面已经说了RelativeLayout要做两次measure，而在做横向的测量时，纵向的测量结果尚未完成，只好暂时使用myHeight传入子View系统，假如子View的Height不等于（设置了margin）myHeight的高度，那么measure中上面代码所做得优化将不起作用，这一过程将进一步影响RelativeLayout的绘制性能。
 
+解决这个问题也很好办：**如果可以，尽量使用padding代替margin。**
+
+## 结论
+
+1. RelativeLayout会让子View调用2次onMeasure，LinearLayout 在有weight时，也会调用子View2次onMeasure
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNTgxOTM4NTUxLC0xMTU0OTA1NDk0XX0=
+eyJoaXN0b3J5IjpbODEzOTg3MDI2LC0xMTU0OTA1NDk0XX0=
 -->
