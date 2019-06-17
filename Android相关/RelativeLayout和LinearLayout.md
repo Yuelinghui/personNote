@@ -73,7 +73,9 @@ for (int i = 0; i < count; i++) {
 
 **当子视图的`lp.weight>0`，暂时先不测量这些子视图，因为后面将把父视图剩余的高度按照weight值的大小平均分配给相应的子视图。** 源码中使用了一个局部变量totalWeight累计所有子视图的weight值。处理lp.weight>0的情况需要注意，如果变量heightMode是EXACTLY，那么，当其他子视图占满父视图的高度后，weight>0的子视图可能分配不到布局空间，从而不被显示，只有当heightMode是AT_MOST或者UNSPECIFIED时，weight>0的视图才能优先获得布局高度。最后我们的结论是：如果不使用weight属性，LinearLayout会在当前方向上进行一次measure的过程，如果使用weight属性，LinearLayout会避开设置过weight属性的view做第一次measure，完了再对设置过weight属性的view做第二次measure。由此可见，weight属性对性能是有影响的。
 
+我们先前的测试结果中RelativeLayout不如LinearLayout快的根本原因是**RelativeLayout需要对其子View进行两次measure过程。而LinearLayout则只需一次measure过程**，所以显然会快于RelativeLayout，但是如果LinearLayout中有weight属性，则也需要进行两次measure，但即便如此，应该仍然会比RelativeLayout的情况好一点。
+
 
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMzc4NTE5NTQ2XX0=
+eyJoaXN0b3J5IjpbMTY5NDcyMzQ5NF19
 -->
