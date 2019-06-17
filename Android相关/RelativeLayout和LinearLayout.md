@@ -75,7 +75,13 @@ for (int i = 0; i < count; i++) {
 
 我们先前的测试结果中RelativeLayout不如LinearLayout快的根本原因是**RelativeLayout需要对其子View进行两次measure过程。而LinearLayout则只需一次measure过程**，所以显然会快于RelativeLayout，但是如果LinearLayout中有weight属性，则也需要进行两次measure，但即便如此，应该仍然会比RelativeLayout的情况好一点。
 
+### RelativeLayout的另一个性能问题
 
+我们再看看View的Measure（）方法都干了些什么？
+
+```
+
+```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTY5NDcyMzQ5NF19
+eyJoaXN0b3J5IjpbNjM4MzAyMDIwXX0=
 -->
