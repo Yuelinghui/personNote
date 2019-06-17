@@ -5,8 +5,27 @@
 假如我们拿一个简单的布局分析一下：
 
 ```
-Hello wor
+Hello world!
+Hello world!
+Hello world!
+Hello world!
+Hello world!
+Hello world!
 ```
+
+要在屏幕上显示着6个TextView，分别用RelativeLayout和LinearLayout布局：
+
+**LinearLayout**
+
+Measure：0.738ms  
+Layout：0.176ms  
+draw：7.655ms
+
+** RelativeLayout
+
+Measure：2.280ms  
+Layout：0.153ms  
+draw：7.696ms
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbMTUyNDcwMjQ1MF19
+eyJoaXN0b3J5IjpbLTE3MzI0OTI5MzldfQ==
 -->
