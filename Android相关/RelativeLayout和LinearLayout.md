@@ -34,8 +34,20 @@ draw：7.696ms
 ### RelativeLayout的measure
 
 ```
+...
+int count = views.length;
+ for (int i = 0; i < count; i++) {
+      View child = views[i];
+      if (child.getVisibility() != GONE) {
+	      ...
+          measureChildHorizontal(child, params, myWidth, myHeight);
 
+        if (positionChildHorizontal(child, params, myWidth, isWrapContentWidth)) {
+          offsetHorizontalAxis = true;
+        }
+      }
+    }
 ```
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTkwMDI2MjQwXX0=
+eyJoaXN0b3J5IjpbLTEzMDIxMTA0MTJdfQ==
 -->
