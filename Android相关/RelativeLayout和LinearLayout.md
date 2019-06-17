@@ -56,7 +56,20 @@ for (int i = 0; i < count; i++) {
 ```
 根据源码我们发现`RelativeLayout`会对子View做两次`measure`。这是为什么呢？首先`RelativeLayout`中子View的排列方式是基于彼此的依赖关系，而这个依赖关系可能和布局中View的顺序并不相同，在确定每个子View的位置的时候，就需要先给所有的子View排序一下。又因为RelativeLayout允许A，B 2个子View，横向上B依赖A，纵向上A依赖B。所以需要横向纵向分别进行一次排序测量。
 
-### LinearLayout的meas
+### LinearLayout的measure
+
+```
+ @Override
+ protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+    if (mOrientation == VERTICAL) {
+      measureVertical(widthMeasureSpec, heightMeasureSpec);
+    } else {
+      measureHorizontal(widthMeasureSpec, heightMeasureSpec);
+    }
+  }
+```
+
+与RelativeLayout相比LinearLayout的measure就简单明了的多了，先判断线性规则，然后执行对应方向上的测量。
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNzY4MTYwMzI2XX0=
+eyJoaXN0b3J5IjpbLTE0NTg2OTY4OTJdfQ==
 -->
