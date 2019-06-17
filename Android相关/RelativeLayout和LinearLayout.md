@@ -80,8 +80,22 @@ for (int i = 0; i < count; i++) {
 我们再看看View的Measure（）方法都干了些什么？
 
 ```
+public final void measure(int widthMeasureSpec, int heightMeasureSpec) {
+    
+    if ((mPrivateFlags & PFLAG_FORCE_LAYOUT) == PFLAG_FORCE_LAYOUT ||
+        widthMeasureSpec != mOldWidthMeasureSpec ||
+        heightMeasureSpec != mOldHeightMeasureSpec) {
+                     ......
+      }
+       mOldWidthMeasureSpec = widthMeasureSpec;
+    mOldHeightMeasureSpec = heightMeasureSpec;
 
+    mMeasureCache.put(key, ((long) mMeasuredWidth) << 32 |
+        (long) mMeasuredHeight & 0xffffffffL); // suppress sign extension
+  }
 ```
+
+
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbNjM4MzAyMDIwXX0=
+eyJoaXN0b3J5IjpbLTExNTQ5MDU0OTRdfQ==
 -->
