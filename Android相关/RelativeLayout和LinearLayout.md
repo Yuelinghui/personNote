@@ -108,14 +108,6 @@ View的measure方法里对绘制过程做了一个优化，如果我们或者我
 3. 在不影响层级深度的情况下,使用LinearLayout和FrameLayout而不是RelativeLayout。
 
 为什么Google给开发者默认新建了个RelativeLayout，而自己却在DecorView中用了个LinearLayout。因为DecorView的层级深度是已知而且固定的，上面一个标题栏，下面一个内容栏。采用RelativeLayout并不会降低层级深度，所以此时在根节点上用LinearLayout是效率最高的。而之所以给开发者默认新建了个RelativeLayout是希望开发者能采用尽量少的View层级来表达布局以实现性能最优，因为复杂的View嵌套对性能的影响会更大一些。
-
-  
-  
-作者：尹star  
-链接：https://www.jianshu.com/p/8a7d059da746  
-来源：简书  
-简书著作权归作者所有，任何形式的转载都请联系作者获得授权并注明出处。
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTExNzAxNDM4MTEsLTExNTQ5MDU0OTRdfQ
-==
+eyJoaXN0b3J5IjpbLTIwMzA4NzU2MSwtMTE1NDkwNTQ5NF19
 -->
